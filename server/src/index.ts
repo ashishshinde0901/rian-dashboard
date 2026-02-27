@@ -24,6 +24,7 @@ app.use(
     secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
+    proxy: config.isProduction, // Trust Railway's proxy
     cookie: {
       secure: config.isProduction,
       httpOnly: true,
