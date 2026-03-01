@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { AsanaService } from '../services/asana.js';
+import { getUserRole, getRoleFunctionFilter } from '../config.js';
 
 const router = Router();
 
@@ -52,6 +53,85 @@ router.get('/tasks/:workspaceGid/filter', requireAuth, async (req, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching tasks:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Get role-based tasks (automatically applies role filter)
+router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
+  try {
+    const user = req.session.asana!.user;
+    const role = getUserRole(user.email || '');
+    const asana = new AsanaService(req.session.asana!.accessToken);
+
+    // For super admins and department heads, we need to get the Function custom field
+    // and filter by their role's function value
+    if (role !== 'user') {
+      const customFields = await asana.getCustomFields(req.params.workspaceGid);
+      const functionField = customFields.find((f: any) =>
+        f.name.toLowerCase() === 'function'
+      );
+
+      if (!functionField) {
+        return res.status(404).json({
+          error: 'Function custom field not found in this workspace'
+        });
+      }
+
+      const roleFilter = getRoleFunctionFilter(role);
+
+      if (role === 'super_admin') {
+        // Super admins see all tasks - fetch all function options
+        const allTasks: any[] = [];
+
+        for (const option of functionField.enum_options) {
+          const tasks = await asana.getTasksByCustomField(
+            req.params.workspaceGid,
+            functionField.gid,
+            option.gid
+          );
+          allTasks.push(...tasks);
+        }
+
+        const enrichedData = await asana.enrichTasks(allTasks, req.params.workspaceGid);
+        return res.json(enrichedData);
+      }
+
+      if (roleFilter) {
+        // Department heads see filtered tasks
+        const option = functionField.enum_options.find((opt: any) =>
+          opt.name === roleFilter
+        );
+
+        if (!option) {
+          return res.status(404).json({
+            error: `Function option "${roleFilter}" not found`
+          });
+        }
+
+        const data = await asana.getTasksByFilter(
+          req.params.workspaceGid,
+          functionField.gid,
+          option.gid
+        );
+        return res.json(data);
+      }
+    }
+
+    // Regular users see only what they have access to
+    // For now, return empty or fetch based on current filter
+    res.json({
+      tasks: [],
+      total_tasks: 0,
+      last_fetched: new Date().toISOString(),
+      workspace_name: 'Your Workspace',
+      message: 'Please select a filter to view tasks'
+    });
+
+  } catch (error: any) {
+    console.error('Error fetching role-based tasks:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
       error: error.message,
     });

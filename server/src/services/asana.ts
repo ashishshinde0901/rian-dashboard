@@ -235,7 +235,7 @@ export class AsanaService {
   }
 
   // ─── Enrich tasks with comments ───
-  private async enrichTasks(rawTasks: any[], workspaceGid: string): Promise<DashboardResponse> {
+  async enrichTasks(rawTasks: any[], workspaceGid: string): Promise<DashboardResponse> {
     // Fetch comments for all tasks in parallel (with concurrency limit)
     const CONCURRENCY = 5;
     const enriched: SalesTask[] = [];

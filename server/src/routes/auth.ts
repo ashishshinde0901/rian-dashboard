@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import axios from 'axios';
 import crypto from 'crypto';
-import { config } from '../config.js';
+import { config, getUserRole } from '../config.js';
 
 const router = Router();
 
@@ -100,7 +100,16 @@ router.get('/me', (req, res) => {
   if (!req.session.asana) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  res.json({ user: req.session.asana.user });
+
+  const user = req.session.asana.user;
+  const role = getUserRole(user.email || '');
+
+  res.json({
+    user: {
+      ...user,
+      role,
+    }
+  });
 });
 
 // Logout
