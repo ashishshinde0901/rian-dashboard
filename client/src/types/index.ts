@@ -2,6 +2,7 @@ export interface AsanaUser {
   gid: string;
   name: string;
   email?: string;
+  role?: 'super_admin' | 'sales_head' | 'delivery_head' | 'tech_head' | 'product_head' | 'user';
 }
 
 export interface AsanaComment {
