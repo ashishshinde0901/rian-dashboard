@@ -128,7 +128,8 @@ export class AsanaService {
   async getTasksByCustomField(
     workspaceGid: string,
     customFieldGid: string,
-    optionGid: string
+    optionGid: string,
+    includeUnassigned: boolean = false
   ): Promise<any[]> {
     console.log(`\nFetching tasks with custom field ${customFieldGid} = ${optionGid}...`);
 
@@ -156,13 +157,27 @@ export class AsanaService {
 
     console.log(`Found ${data.data.length} total tasks, filtering by custom field...`);
 
-    // Filter tasks that have the selected option
+    // Filter tasks that have the selected option OR no value set (if includeUnassigned is true)
     const filtered = data.data.filter((task: any) => {
-      if (!task.custom_fields || !Array.isArray(task.custom_fields)) return false;
+      if (!task.custom_fields || !Array.isArray(task.custom_fields)) {
+        // If task has no custom fields at all and includeUnassigned is true, include it
+        return includeUnassigned;
+      }
 
       const customField = task.custom_fields.find((cf: any) => cf.gid === customFieldGid);
 
-      if (!customField) return false;
+      if (!customField) {
+        // Custom field exists in workspace but not set on this task
+        return includeUnassigned;
+      }
+
+      // Check if the custom field has no value set
+      const hasNoValue = !customField.enum_value &&
+                        (!customField.multi_enum_values || customField.multi_enum_values.length === 0);
+
+      if (hasNoValue && includeUnassigned) {
+        return true;
+      }
 
       // For enum fields, check if value matches
       if (customField.enum_value && customField.enum_value.gid === optionGid) {

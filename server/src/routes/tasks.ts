@@ -83,17 +83,27 @@ router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
       const roleFilter = getRoleFunctionFilter(role);
 
       if (role === 'super_admin') {
-        // Super admins see all tasks + their personal tasks
+        // Super admins see all tasks (including unassigned function) + their personal tasks
         const allTasks: any[] = [];
 
         for (const option of functionField.enum_options) {
           const tasks = await asana.getTasksByCustomField(
             req.params.workspaceGid,
             functionField.gid,
-            option.gid
+            option.gid,
+            false // Don't include unassigned here, we'll fetch them separately
           );
           allTasks.push(...tasks);
         }
+
+        // Get tasks with no Function assigned
+        const unassignedTasks = await asana.getTasksByCustomField(
+          req.params.workspaceGid,
+          functionField.gid,
+          '', // Empty option - we only care about unassigned
+          true // Include unassigned
+        );
+        allTasks.push(...unassignedTasks);
 
         // Get user's personal tasks (assigned to them or following)
         const userTasks = await asana.getUserTasks(req.params.workspaceGid, user.gid);
@@ -110,7 +120,7 @@ router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
       }
 
       if (roleFilter) {
-        // Department heads see filtered tasks + their personal tasks
+        // Department heads see: their function tasks + unassigned function tasks + their personal tasks
         const option = functionField.enum_options.find((opt: any) =>
           opt.name === roleFilter
         );
@@ -121,11 +131,12 @@ router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
           });
         }
 
-        // Get role-based tasks
+        // Get role-based tasks (including tasks with no Function assigned)
         const roleTasks = await asana.getTasksByCustomField(
           req.params.workspaceGid,
           functionField.gid,
-          option.gid
+          option.gid,
+          true // Include tasks with no Function value set
         );
 
         // Get user's personal tasks (assigned to them or following)
