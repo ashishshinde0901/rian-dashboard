@@ -8,7 +8,7 @@ interface Props {
   taskUrl?: string;
 }
 
-const VISIBLE_COUNT = 1;
+const VISIBLE_COUNT = 3;
 
 const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
   const [expanded, setExpanded] = useState(false);

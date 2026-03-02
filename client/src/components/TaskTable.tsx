@@ -35,13 +35,6 @@ const TaskTable = ({ tasks }: Props) => {
     }
   };
 
-  const handleMouseDown = (col: string, e: React.MouseEvent) => {
-    resizingCol.current = col;
-    startX.current = e.clientX;
-    startWidth.current = colWidths[col as keyof typeof colWidths];
-    e.preventDefault();
-  };
-
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingCol.current || !tableRef.current) return;
@@ -61,16 +54,21 @@ const TaskTable = ({ tasks }: Props) => {
       resizingCol.current = null;
     };
 
-    if (resizingCol.current) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
+
+  const handleMouseDown = (col: string, e: React.MouseEvent) => {
+    resizingCol.current = col;
+    startX.current = e.clientX;
+    startWidth.current = colWidths[col as keyof typeof colWidths];
+    e.preventDefault();
+  };
 
   const filtered = tasks
     .filter((t) => {
