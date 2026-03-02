@@ -232,23 +232,62 @@ export class AsanaService {
     return userTasks;
   }
 
+  // Helper function to clean Asana profile URLs from text
+  private cleanMentions(text: string): string {
+    if (!text) return text;
+
+    // Replace Asana profile URLs with @mention placeholder
+    // Pattern: https://app.asana.com/{workspace_id}/{project_id}/profile/{user_id}
+    const profileUrlPattern = /https:\/\/app\.asana\.com\/\d+\/\d+\/profile\/\d+/g;
+
+    return text.replace(profileUrlPattern, '@user');
+  }
+
   // ─── Get ALL comments for a task (sorted newest first) ───
   async getTaskComments(taskGid: string): Promise<AsanaComment[]> {
     const { data } = await this.api.get(`/tasks/${taskGid}/stories`, {
       params: {
-        opt_fields: 'text,created_by.name,created_at,type',
+        opt_fields: 'text,html_text,created_by.name,created_at,type',
       },
     });
 
     // Filter to only human comments (not system-generated stories)
     const comments = data.data
       .filter((story: any) => story.type === 'comment')
+      .map((story: any) => ({
+        ...story,
+        // Use html_text if available (contains proper @mentions), otherwise clean the text
+        text: story.html_text
+          ? this.stripHtmlTags(story.html_text)
+          : this.cleanMentions(story.text || '')
+      }))
       .sort(
         (a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
     return comments;
+  }
+
+  // Helper function to strip HTML tags and convert to plain text
+  private stripHtmlTags(html: string): string {
+    if (!html) return html;
+
+    // Replace <a> tags with their text content
+    let cleaned = html.replace(/<a[^>]*data-asana-type="user"[^>]*>([^<]+)<\/a>/g, '@$1');
+
+    // Remove all other HTML tags
+    cleaned = cleaned.replace(/<[^>]+>/g, '');
+
+    // Decode HTML entities
+    cleaned = cleaned
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+
+    return cleaned;
   }
 
   // ─── Get tasks by custom field filter ───
