@@ -181,6 +181,42 @@ export class AsanaService {
     return filtered;
   }
 
+  // ─── Get tasks assigned to or involving the current user ───
+  async getUserTasks(workspaceGid: string, userGid: string): Promise<any[]> {
+    console.log(`\nFetching tasks for user ${userGid}...`);
+
+    const { data } = await this.api.get(
+      `/workspaces/${workspaceGid}/tasks/search`,
+      {
+        params: {
+          'is_subtask': 'false',
+          opt_fields: [
+            'name',
+            'assignee.name',
+            'assignee.photo.image_60x60',
+            'modified_at',
+            'notes',
+            'completed',
+            'permalink_url',
+            'custom_fields',
+            'followers.gid',
+          ].join(','),
+          limit: 100,
+        },
+      }
+    );
+
+    // Filter to tasks where user is assignee or follower
+    const userTasks = data.data.filter((task: any) => {
+      const isAssignee = task.assignee?.gid === userGid;
+      const isFollower = task.followers?.some((f: any) => f.gid === userGid);
+      return isAssignee || isFollower;
+    });
+
+    console.log(`Found ${userTasks.length} tasks involving user\n`);
+    return userTasks;
+  }
+
   // ─── Get ALL comments for a task (sorted newest first) ───
   async getTaskComments(taskGid: string): Promise<AsanaComment[]> {
     const { data } = await this.api.get(`/tasks/${taskGid}/stories`, {

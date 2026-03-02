@@ -83,7 +83,7 @@ router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
       const roleFilter = getRoleFunctionFilter(role);
 
       if (role === 'super_admin') {
-        // Super admins see all tasks - fetch all function options
+        // Super admins see all tasks + their personal tasks
         const allTasks: any[] = [];
 
         for (const option of functionField.enum_options) {
@@ -95,12 +95,22 @@ router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
           allTasks.push(...tasks);
         }
 
-        const enrichedData = await asana.enrichTasks(allTasks, req.params.workspaceGid);
+        // Get user's personal tasks (assigned to them or following)
+        const userTasks = await asana.getUserTasks(req.params.workspaceGid, user.gid);
+
+        // Merge and deduplicate by task gid
+        const taskMap = new Map();
+        [...allTasks, ...userTasks].forEach(task => {
+          taskMap.set(task.gid, task);
+        });
+        const mergedTasks = Array.from(taskMap.values());
+
+        const enrichedData = await asana.enrichTasks(mergedTasks, req.params.workspaceGid);
         return res.json(enrichedData);
       }
 
       if (roleFilter) {
-        // Department heads see filtered tasks
+        // Department heads see filtered tasks + their personal tasks
         const option = functionField.enum_options.find((opt: any) =>
           opt.name === roleFilter
         );
@@ -111,11 +121,24 @@ router.get('/tasks/:workspaceGid/role-based', requireAuth, async (req, res) => {
           });
         }
 
-        const data = await asana.getTasksByFilter(
+        // Get role-based tasks
+        const roleTasks = await asana.getTasksByCustomField(
           req.params.workspaceGid,
           functionField.gid,
           option.gid
         );
+
+        // Get user's personal tasks (assigned to them or following)
+        const userTasks = await asana.getUserTasks(req.params.workspaceGid, user.gid);
+
+        // Merge and deduplicate by task gid
+        const taskMap = new Map();
+        [...roleTasks, ...userTasks].forEach(task => {
+          taskMap.set(task.gid, task);
+        });
+        const mergedTasks = Array.from(taskMap.values());
+
+        const data = await asana.enrichTasks(mergedTasks, req.params.workspaceGid);
         return res.json(data);
       }
     }
