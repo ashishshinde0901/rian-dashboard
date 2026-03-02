@@ -68,6 +68,7 @@ const TaskTable = ({ tasks }: Props) => {
     startX.current = e.clientX;
     startWidth.current = colWidths[col as keyof typeof colWidths];
     e.preventDefault();
+    e.stopPropagation(); // Prevent triggering sort on header click
   };
 
   const filtered = tasks
@@ -139,7 +140,7 @@ const TaskTable = ({ tasks }: Props) => {
             >
               Task <SortIcon field="name" />
               <div
-                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-300 transition-colors"
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('task', e)}
               />
             </th>
@@ -150,7 +151,7 @@ const TaskTable = ({ tasks }: Props) => {
             >
               Updated <SortIcon field="updated_date" />
               <div
-                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-300 transition-colors"
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('updated', e)}
               />
             </th>
@@ -160,7 +161,7 @@ const TaskTable = ({ tasks }: Props) => {
             >
               Task Status
               <div
-                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-300 transition-colors"
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('status', e)}
               />
             </th>
@@ -170,7 +171,7 @@ const TaskTable = ({ tasks }: Props) => {
             >
               Description
               <div
-                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-300 transition-colors"
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('description', e)}
               />
             </th>
