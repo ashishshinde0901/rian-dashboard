@@ -27,6 +27,8 @@ export interface SalesTask {
   total_comments: number;        // total count
   permalink_url?: string;        // direct link to task in Asana
   task_status?: string;          // Task Status custom field value
+  deal_value?: string;           // Deal Value custom field value
+  expected_start_date?: string;  // Expected Start Date custom field value
 }
 
 export interface DashboardResponse {

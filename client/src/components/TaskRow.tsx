@@ -50,16 +50,28 @@ const TaskRow = ({ task }: Props) => {
       </td>
 
       <td className="px-4 py-3">
-        <span className="text-sm text-gray-600">{formatRelativeDate(task.updated_date)}</span>
-      </td>
-
-      <td className="px-4 py-3">
         {task.task_status ? (
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
             {task.task_status}
           </span>
         ) : (
           <span className="text-gray-400 italic text-sm">No status</span>
+        )}
+      </td>
+
+      <td className="px-4 py-3">
+        {task.deal_value ? (
+          <span className="text-sm text-gray-700 font-medium">${task.deal_value}</span>
+        ) : (
+          <span className="text-gray-400 italic text-sm">-</span>
+        )}
+      </td>
+
+      <td className="px-4 py-3">
+        {task.expected_start_date ? (
+          <span className="text-sm text-gray-700">{new Date(task.expected_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+        ) : (
+          <span className="text-gray-400 italic text-sm">-</span>
         )}
       </td>
 

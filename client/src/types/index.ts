@@ -28,6 +28,8 @@ export interface SalesTask {
   total_comments: number;
   permalink_url?: string;
   task_status?: string;
+  deal_value?: string;
+  expected_start_date?: string;
 }
 
 export interface DashboardResponse {

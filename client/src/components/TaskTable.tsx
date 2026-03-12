@@ -15,10 +15,11 @@ const TaskTable = ({ tasks }: Props) => {
   // Column widths (percentages)
   const [colWidths, setColWidths] = useState({
     task: 20,
-    updated: 10,
     status: 10,
+    dealValue: 10,
+    startDate: 12,
     description: 15,
-    comments: 45,
+    comments: 33,
   });
 
   const tableRef = useRef<HTMLTableElement>(null);
@@ -145,17 +146,6 @@ const TaskTable = ({ tasks }: Props) => {
               />
             </th>
             <th
-              className="px-4 py-3 cursor-pointer hover:text-gray-900 relative"
-              style={{ width: `${colWidths.updated}%` }}
-              onClick={() => handleSort('updated_date')}
-            >
-              Updated <SortIcon field="updated_date" />
-              <div
-                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
-                onMouseDown={(e) => handleMouseDown('updated', e)}
-              />
-            </th>
-            <th
               className="px-4 py-3 relative"
               style={{ width: `${colWidths.status}%` }}
             >
@@ -163,6 +153,26 @@ const TaskTable = ({ tasks }: Props) => {
               <div
                 className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('status', e)}
+              />
+            </th>
+            <th
+              className="px-4 py-3 relative"
+              style={{ width: `${colWidths.dealValue}%` }}
+            >
+              Deal Value
+              <div
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
+                onMouseDown={(e) => handleMouseDown('dealValue', e)}
+              />
+            </th>
+            <th
+              className="px-4 py-3 relative"
+              style={{ width: `${colWidths.startDate}%` }}
+            >
+              Expected Start Date
+              <div
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
+                onMouseDown={(e) => handleMouseDown('startDate', e)}
               />
             </th>
             <th
@@ -189,7 +199,7 @@ const TaskTable = ({ tasks }: Props) => {
           ))}
           {filtered.length === 0 && (
             <tr>
-              <td colSpan={5} className="text-center py-12 text-gray-400">
+              <td colSpan={6} className="text-center py-12 text-gray-400">
                 No tasks found matching your criteria.
               </td>
             </tr>

@@ -336,21 +336,42 @@ export class AsanaService {
         batch.map(async (task) => {
           const comments = await this.getTaskComments(task.gid);
 
-          // Extract "Task Status" custom field value
+          // Extract custom field values
           let taskStatus: string | undefined = undefined;
+          let dealValue: string | undefined = undefined;
+          let expectedStartDate: string | undefined = undefined;
+
           if (task.custom_fields && Array.isArray(task.custom_fields)) {
+            // Extract Task Status
             const statusField = task.custom_fields.find(
               (cf: any) => cf.name?.toLowerCase() === 'task status'
             );
             if (statusField) {
-              // For enum fields
               if (statusField.enum_value?.name) {
                 taskStatus = statusField.enum_value.name;
-              }
-              // For multi_enum fields, join all selected values
-              else if (statusField.multi_enum_values && Array.isArray(statusField.multi_enum_values)) {
+              } else if (statusField.multi_enum_values && Array.isArray(statusField.multi_enum_values)) {
                 taskStatus = statusField.multi_enum_values.map((v: any) => v.name).join(', ');
               }
+            }
+
+            // Extract Deal Value
+            const dealValueField = task.custom_fields.find(
+              (cf: any) => cf.name?.toLowerCase() === 'deal value'
+            );
+            if (dealValueField) {
+              if (dealValueField.number_value !== null && dealValueField.number_value !== undefined) {
+                dealValue = dealValueField.number_value.toString();
+              } else if (dealValueField.text_value) {
+                dealValue = dealValueField.text_value;
+              }
+            }
+
+            // Extract Expected Start Date
+            const startDateField = task.custom_fields.find(
+              (cf: any) => cf.name?.toLowerCase() === 'expected start date'
+            );
+            if (startDateField && startDateField.date_value) {
+              expectedStartDate = startDateField.date_value;
             }
           }
 
@@ -366,6 +387,8 @@ export class AsanaService {
             total_comments: comments.length,
             permalink_url: task.permalink_url || undefined,
             task_status: taskStatus,
+            deal_value: dealValue,
+            expected_start_date: expectedStartDate,
           };
         })
       );
