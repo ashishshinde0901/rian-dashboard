@@ -60,52 +60,27 @@ const ExecutiveSummaryCard = ({ summary }: Props) => {
         </div>
       </div>
 
-      {/* Key Highlights */}
-      {summary.keyHighlights.length > 0 && (
-        <div className="px-4 py-3 bg-white border-b border-gray-200">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Key Updates
-          </div>
-          <div className="space-y-1.5">
-            {summary.keyHighlights.map((highlight, index) => (
-              <div key={index} className="text-sm text-gray-700 leading-relaxed">
-                {highlight}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Timeline */}
-      {summary.timeline.length > 0 && (
-        <div className="px-4 py-3 bg-gradient-to-b from-white to-gray-50">
-          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Activity Timeline
-          </div>
-          <div className="space-y-2">
-            {summary.timeline.map((event, index) => (
-              <div
-                key={event.date}
-                className="flex items-start gap-3 group"
-              >
-                {/* Timeline indicator */}
-                <div className="flex flex-col items-center">
-                  <div className={`w-2 h-2 rounded-full ${index === 0 ? 'bg-indigo-500' : 'bg-gray-300'} mt-1.5`}></div>
-                  {index < summary.timeline.length - 1 && (
-                    <div className="w-0.5 h-full bg-gray-200 mt-1"></div>
-                  )}
+      {/* Updates List */}
+      {summary.updates.length > 0 && (
+        <div className="px-4 py-3 bg-white">
+          <div className="space-y-2.5">
+            {summary.updates.map((update, index) => (
+              <div key={index} className="flex items-start gap-3">
+                {/* Bullet point */}
+                <div className="flex-shrink-0 mt-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
                 </div>
 
-                {/* Event content */}
-                <div className="flex-1 pb-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-xs font-semibold ${index === 0 ? 'text-indigo-600' : 'text-gray-600'}`}>
-                      {event.displayDate}
-                    </span>
-                    <span className="text-sm text-gray-700 leading-relaxed">
-                      {event.summary}
+                {/* Update content */}
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    <span className="text-xs font-semibold text-indigo-600">
+                      {update.displayDate}
                     </span>
                   </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {update.text}
+                  </p>
                 </div>
               </div>
             ))}
