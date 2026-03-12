@@ -1,9 +1,6 @@
-import { useMemo } from 'react';
 import CommentsCell from './CommentsCell';
 import { SalesTask } from '../types';
-import { formatRelativeDate } from '../utils/formatDate';
 import { getStatusColors } from '../utils/statusColors';
-import { generateExecutiveSummary } from '../utils/executiveSummary';
 
 interface Props {
   task: SalesTask;
@@ -12,22 +9,61 @@ interface Props {
 const TaskRow = ({ task }: Props) => {
   const statusColors = getStatusColors(task.task_status);
 
-  // Generate executive summary to get status color for row background
-  const executiveSummary = useMemo(
-    () => generateExecutiveSummary(task.comments, task.name, task.task_status),
-    [task.comments, task.name, task.task_status]
-  );
+  // Determine row background color based on Task Status field
+  const getRowBackgroundColor = (taskStatus?: string): string => {
+    if (!taskStatus) return 'bg-white';
 
-  // Map status color to row background with stronger colors
-  const rowBgColors = {
-    green: 'bg-green-100',
-    yellow: 'bg-yellow-100',
-    red: 'bg-red-100',
-    blue: 'bg-blue-100',
-    gray: 'bg-white',
+    const statusLower = taskStatus.toLowerCase();
+
+    // Blocked / Issues - Red
+    if (
+      statusLower.includes('blocked') ||
+      statusLower.includes('issue') ||
+      statusLower.includes('problem') ||
+      statusLower.includes('stuck') ||
+      statusLower.includes('critical')
+    ) {
+      return 'bg-red-100';
+    }
+
+    // In Progress / Delivery / Active - Green
+    if (
+      statusLower.includes('in progress') ||
+      statusLower.includes('delivery') ||
+      statusLower.includes('active') ||
+      statusLower.includes('working') ||
+      statusLower.includes('ongoing') ||
+      statusLower.includes('started')
+    ) {
+      return 'bg-green-100';
+    }
+
+    // Completed / Done - Blue
+    if (
+      statusLower.includes('completed') ||
+      statusLower.includes('done') ||
+      statusLower.includes('finished') ||
+      statusLower.includes('closed')
+    ) {
+      return 'bg-blue-100';
+    }
+
+    // Pending / Waiting / On Hold - Yellow
+    if (
+      statusLower.includes('pending') ||
+      statusLower.includes('waiting') ||
+      statusLower.includes('on hold') ||
+      statusLower.includes('paused') ||
+      statusLower.includes('deferred')
+    ) {
+      return 'bg-yellow-100';
+    }
+
+    // Default - White
+    return 'bg-white';
   };
 
-  const rowBg = rowBgColors[executiveSummary.statusColor];
+  const rowBg = getRowBackgroundColor(task.task_status);
 
   return (
     <tr className={`border-b border-gray-200 transition-colors align-top ${rowBg}`}>
