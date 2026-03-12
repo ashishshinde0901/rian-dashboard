@@ -1,12 +1,15 @@
 import CommentsCell from './CommentsCell';
 import { SalesTask } from '../types';
 import { formatRelativeDate } from '../utils/formatDate';
+import { getStatusColors } from '../utils/statusColors';
 
 interface Props {
   task: SalesTask;
 }
 
 const TaskRow = ({ task }: Props) => {
+  const statusColors = getStatusColors(task.task_status);
+
   return (
     <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors align-top">
       <td className="px-4 py-3">
@@ -32,9 +35,13 @@ const TaskRow = ({ task }: Props) => {
       </td>
 
       <td className="px-4 py-3">
-        <span className="text-sm text-gray-700">
-          {task.task_status || <span className="text-gray-400 italic">No status</span>}
-        </span>
+        {task.task_status ? (
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
+            {task.task_status}
+          </span>
+        ) : (
+          <span className="text-gray-400 italic text-sm">No status</span>
+        )}
       </td>
 
       <td className="px-4 py-3">

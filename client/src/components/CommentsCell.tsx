@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import CommentItem from './CommentItem';
+import { useState, useMemo } from 'react';
+import DailySummaryItem from './DailySummaryItem';
 import { AsanaComment } from '../types';
+import { groupCommentsByDate } from '../utils/commentSummaries';
 
 interface Props {
   comments: AsanaComment[];
@@ -8,13 +9,16 @@ interface Props {
   taskUrl?: string;
 }
 
-const VISIBLE_COUNT = 3;
+const VISIBLE_COUNT = 2; // Show 2 most recent days by default
 
 const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
   const [expanded, setExpanded] = useState(false);
 
-  const visibleComments = expanded ? comments : comments.slice(0, VISIBLE_COUNT);
-  const hiddenCount = totalComments - VISIBLE_COUNT;
+  // Group comments by date
+  const dailySummaries = useMemo(() => groupCommentsByDate(comments), [comments]);
+
+  const visibleSummaries = expanded ? dailySummaries : dailySummaries.slice(0, VISIBLE_COUNT);
+  const hiddenCount = dailySummaries.length - VISIBLE_COUNT;
   const hasMore = hiddenCount > 0;
 
   const handleAddComment = () => {
@@ -60,8 +64,8 @@ const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
       </div>
 
       <div className="space-y-2">
-        {visibleComments.map((comment) => (
-          <CommentItem key={comment.gid} comment={comment} />
+        {visibleSummaries.map((summary) => (
+          <DailySummaryItem key={summary.date} dailySummary={summary} />
         ))}
       </div>
 
@@ -73,8 +77,8 @@ const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
                      border border-gray-200 hover:border-gray-300"
         >
           {expanded
-            ? '▲ Collapse comments'
-            : `▼ Show ${hiddenCount} more comment${hiddenCount > 1 ? 's' : ''}`}
+            ? '▲ Collapse summaries'
+            : `▼ Show ${hiddenCount} more day${hiddenCount > 1 ? 's' : ''}`}
         </button>
       )}
     </div>
