@@ -342,6 +342,14 @@ export class AsanaService {
           let expectedStartDate: string | undefined = undefined;
 
           if (task.custom_fields && Array.isArray(task.custom_fields)) {
+            // Log custom fields for debugging (first task only)
+            if (i === 0) {
+              console.log(`\nCustom fields for task "${task.name}":`);
+              task.custom_fields.forEach((cf: any) => {
+                console.log(`  - "${cf.name}" (type: ${cf.resource_subtype}): ${JSON.stringify(cf.date_value || cf.number_value || cf.text_value || cf.enum_value?.name || 'no value')}`);
+              });
+            }
+
             // Extract Task Status
             const statusField = task.custom_fields.find(
               (cf: any) => cf.name?.toLowerCase() === 'task status'
@@ -354,9 +362,12 @@ export class AsanaService {
               }
             }
 
-            // Extract Deal Value
+            // Extract Deal Value - try multiple field name variations
             const dealValueField = task.custom_fields.find(
-              (cf: any) => cf.name?.toLowerCase() === 'deal value'
+              (cf: any) => {
+                const name = cf.name?.toLowerCase() || '';
+                return name === 'deal value' || name.includes('deal') || name.includes('value');
+              }
             );
             if (dealValueField) {
               if (dealValueField.number_value !== null && dealValueField.number_value !== undefined) {
@@ -366,12 +377,19 @@ export class AsanaService {
               }
             }
 
-            // Extract Expected Start Date
+            // Extract Expected Start Date - try multiple field name variations
             const startDateField = task.custom_fields.find(
-              (cf: any) => cf.name?.toLowerCase() === 'expected start date'
+              (cf: any) => {
+                const name = cf.name?.toLowerCase() || '';
+                return name === 'expected start date' ||
+                       name === 'start date' ||
+                       name.includes('expected') && name.includes('start') ||
+                       name.includes('start') && name.includes('date');
+              }
             );
-            if (startDateField && startDateField.date_value) {
-              expectedStartDate = startDateField.date_value;
+            if (startDateField) {
+              // Try different date field properties
+              expectedStartDate = startDateField.date_value || startDateField.display_value || startDateField.text_value;
             }
           }
 

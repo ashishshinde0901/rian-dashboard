@@ -61,7 +61,7 @@ const TaskRow = ({ task }: Props) => {
 
       <td className="px-4 py-3">
         {task.deal_value ? (
-          <span className="text-sm text-gray-700 font-medium">${task.deal_value}</span>
+          <span className="text-sm text-gray-700 font-medium">₹{task.deal_value}</span>
         ) : (
           <span className="text-gray-400 italic text-sm">-</span>
         )}
