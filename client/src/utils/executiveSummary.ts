@@ -133,28 +133,15 @@ const extractUpdates = (comments: AsanaComment[]): UpdateItem[] => {
 };
 
 /**
- * Formats a date string into a human-readable format
+ * Formats a date string into actual date format
  */
 const formatDisplayDate = (dateStr: string): string => {
   const date = new Date(dateStr);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
 
-  // Reset time parts for comparison
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
-
-  if (dateOnly.getTime() === todayOnly.getTime()) {
-    return 'Today';
-  } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
-    return 'Yesterday';
-  } else {
-    // Format as "Mar 7"
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  }
+  // Format as "Mar 7, 2024"
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 };
