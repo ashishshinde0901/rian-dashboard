@@ -69,7 +69,7 @@ const TaskRow = ({ task }: Props) => {
 
       <td className="px-4 py-3">
         {task.expected_start_date ? (
-          <span className="text-sm text-gray-700">{new Date(task.expected_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <span className="text-sm text-gray-700">{task.expected_start_date}</span>
         ) : (
           <span className="text-gray-400 italic text-sm">-</span>
         )}

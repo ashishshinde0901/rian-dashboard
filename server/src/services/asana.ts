@@ -377,7 +377,7 @@ export class AsanaService {
               }
             }
 
-            // Extract Expected Start Date - try multiple field name variations
+            // Extract Expected Start Date - it's a text field
             const startDateField = task.custom_fields.find(
               (cf: any) => {
                 const name = cf.name?.toLowerCase() || '';
@@ -387,9 +387,8 @@ export class AsanaService {
                        name.includes('start') && name.includes('date');
               }
             );
-            if (startDateField) {
-              // Try different date field properties
-              expectedStartDate = startDateField.date_value || startDateField.display_value || startDateField.text_value;
+            if (startDateField && startDateField.text_value) {
+              expectedStartDate = startDateField.text_value;
             }
           }
 
