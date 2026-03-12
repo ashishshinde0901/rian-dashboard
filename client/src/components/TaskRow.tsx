@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import CommentsCell from './CommentsCell';
 import { SalesTask } from '../types';
 import { formatRelativeDate } from '../utils/formatDate';
 import { getStatusColors } from '../utils/statusColors';
+import { generateExecutiveSummary } from '../utils/executiveSummary';
 
 interface Props {
   task: SalesTask;
@@ -10,8 +12,25 @@ interface Props {
 const TaskRow = ({ task }: Props) => {
   const statusColors = getStatusColors(task.task_status);
 
+  // Generate executive summary to get status color for row background
+  const executiveSummary = useMemo(
+    () => generateExecutiveSummary(task.comments, task.name, task.task_status),
+    [task.comments, task.name, task.task_status]
+  );
+
+  // Map status color to row background
+  const rowBgColors = {
+    green: 'bg-green-50/30',
+    yellow: 'bg-yellow-50/30',
+    red: 'bg-red-50/50',
+    blue: 'bg-blue-50/30',
+    gray: 'bg-white',
+  };
+
+  const rowBg = rowBgColors[executiveSummary.statusColor];
+
   return (
-    <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors align-top">
+    <tr className={`border-b border-gray-200 transition-colors align-top ${rowBg}`}>
       <td className="px-4 py-3">
         <div className="flex items-start gap-2">
           <span className={`mt-0.5 text-lg ${task.completed ? 'text-green-500' : 'text-gray-300'}`}>
