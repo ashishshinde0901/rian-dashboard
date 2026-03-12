@@ -4,6 +4,8 @@ import cors from 'cors';
 import { config } from './config.js';
 import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
+import emailRoutes from './routes/email.js';
+import { SchedulerService } from './services/scheduler.js';
 
 const app = express();
 
@@ -37,6 +39,7 @@ app.use(
 // Routes
 app.use('/auth', authRoutes);
 app.use('/api', taskRoutes);
+app.use('/api/email', emailRoutes);
 
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
@@ -45,4 +48,7 @@ app.listen(config.port, () => {
   console.log(`🚀 Server running on http://localhost:${config.port}`);
   console.log(`📊 Frontend URL: ${config.frontendUrl}`);
   console.log(`🔐 OAuth Redirect: ${config.asana.redirectUri}`);
+
+  // Start daily email scheduler
+  SchedulerService.startDailyEmailScheduler();
 });
