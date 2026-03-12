@@ -59,6 +59,8 @@ const TaskRow = ({ task }: Props) => {
           comments={task.comments}
           totalComments={task.total_comments}
           taskUrl={task.permalink_url}
+          taskName={task.name}
+          taskStatus={task.task_status}
         />
       </td>
     </tr>

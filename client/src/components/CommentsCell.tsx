@@ -1,25 +1,22 @@
-import { useState, useMemo } from 'react';
-import DailySummaryItem from './DailySummaryItem';
+import { useMemo } from 'react';
+import ExecutiveSummaryCard from './ExecutiveSummaryCard';
 import { AsanaComment } from '../types';
-import { groupCommentsByDate } from '../utils/commentSummaries';
+import { generateExecutiveSummary } from '../utils/executiveSummary';
 
 interface Props {
   comments: AsanaComment[];
   totalComments: number;
   taskUrl?: string;
+  taskName?: string;
+  taskStatus?: string;
 }
 
-const VISIBLE_COUNT = 2; // Show 2 most recent days by default
-
-const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
-  const [expanded, setExpanded] = useState(false);
-
-  // Group comments by date
-  const dailySummaries = useMemo(() => groupCommentsByDate(comments), [comments]);
-
-  const visibleSummaries = expanded ? dailySummaries : dailySummaries.slice(0, VISIBLE_COUNT);
-  const hiddenCount = dailySummaries.length - VISIBLE_COUNT;
-  const hasMore = hiddenCount > 0;
+const CommentsCell = ({ comments, totalComments, taskUrl, taskName = '', taskStatus }: Props) => {
+  // Generate executive summary
+  const executiveSummary = useMemo(
+    () => generateExecutiveSummary(comments, taskName, taskStatus),
+    [comments, taskName, taskStatus]
+  );
 
   const handleAddComment = () => {
     if (taskUrl) {
@@ -49,7 +46,7 @@ const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-2">
         <span className="font-medium text-gray-500 text-xs uppercase tracking-wide">
-          Updates ({totalComments})
+          Executive Summary
         </span>
         <button
           onClick={handleAddComment}
@@ -63,24 +60,7 @@ const CommentsCell = ({ comments, totalComments, taskUrl }: Props) => {
         </button>
       </div>
 
-      <div className="space-y-2">
-        {visibleSummaries.map((summary) => (
-          <DailySummaryItem key={summary.date} dailySummary={summary} />
-        ))}
-      </div>
-
-      {hasMore && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-2 w-full text-center py-2 px-3 rounded-lg text-sm font-medium transition-colors
-                     bg-gray-50 hover:bg-gray-100 text-indigo-600 hover:text-indigo-700
-                     border border-gray-200 hover:border-gray-300"
-        >
-          {expanded
-            ? '▲ Collapse summaries'
-            : `▼ Show ${hiddenCount} more day${hiddenCount > 1 ? 's' : ''}`}
-        </button>
-      )}
+      <ExecutiveSummaryCard summary={executiveSummary} />
     </div>
   );
 };
