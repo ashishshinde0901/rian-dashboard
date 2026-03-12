@@ -18,12 +18,12 @@ const TaskRow = ({ task }: Props) => {
     [task.comments, task.name, task.task_status]
   );
 
-  // Map status color to row background
+  // Map status color to row background with stronger colors
   const rowBgColors = {
-    green: 'bg-green-50/30',
-    yellow: 'bg-yellow-50/30',
-    red: 'bg-red-50/50',
-    blue: 'bg-blue-50/30',
+    green: 'bg-green-100',
+    yellow: 'bg-yellow-100',
+    red: 'bg-red-100',
+    blue: 'bg-blue-100',
     gray: 'bg-white',
   };
 
