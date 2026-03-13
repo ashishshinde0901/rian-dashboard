@@ -40,9 +40,11 @@ export class EmailService {
           pass: process.env.EMAIL_PASSWORD,
         },
         // Force IPv4 to avoid Railway IPv6 issues
-        family: 4,
-      });
-      console.log('📧 Email service using SMTP (IPv4)');
+        dnsTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000,
+      } as any);
+      console.log('📧 Email service using SMTP');
     }
 
     // Initialize Gemini service if API key is available
