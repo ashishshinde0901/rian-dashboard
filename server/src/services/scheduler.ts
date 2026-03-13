@@ -27,11 +27,11 @@ export class SchedulerService {
       return;
     }
 
-    // Schedule for 9:00 AM IST (3:30 AM UTC) every day
+    // Schedule for 6:00 PM IST (12:30 PM UTC) every day
     // Cron format: minute hour day month weekday
-    const cronSchedule = '30 3 * * *'; // 3:30 AM UTC = 9:00 AM IST
+    const cronSchedule = '30 12 * * *'; // 12:30 PM UTC = 6:00 PM IST
 
-    console.log(`📧 Daily email scheduler started - will run at 9:00 AM IST every day`);
+    console.log(`📧 Daily email scheduler started - will run at 6:00 PM IST every day`);
 
     cron.schedule(cronSchedule, async () => {
       try {

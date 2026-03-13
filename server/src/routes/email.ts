@@ -71,9 +71,7 @@ router.get('/preview-daily-update', async (req, res) => {
 
     // Generate email preview (without sending)
     const emailService = new EmailService();
-    const preview = (emailService as any).generateEmailHTML(
-      (emailService as any).analyzeTasks(dashboard.tasks)
-    );
+    const preview = await emailService.generatePreview(dashboard.tasks);
 
     res.send(preview);
   } catch (error: any) {

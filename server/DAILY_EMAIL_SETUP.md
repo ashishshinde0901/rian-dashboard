@@ -20,6 +20,9 @@ ASANA_ACCESS_TOKEN=your-personal-access-token-here
 DAILY_EMAIL_WORKSPACE_GID=your-workspace-gid
 DAILY_EMAIL_CUSTOM_FIELD_GID=your-custom-field-gid
 DAILY_EMAIL_OPTION_GID=your-sales-initiative-option-gid
+
+# Gemini AI Configuration (for intelligent summaries)
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
 ## Email Setup Options
@@ -68,17 +71,24 @@ EMAIL_PASSWORD=your-ses-smtp-password
 3. Give it a name like "Daily Email Automation"
 4. Copy the token to `ASANA_ACCESS_TOKEN`
 
+### Get Gemini API Key:
+1. Go to https://makersuite.google.com/app/apikey
+2. Click "Create API key"
+3. Copy the key to `GEMINI_API_KEY`
+4. **Note:** Without this key, the system will use keyword-based analysis instead of AI-powered summaries
+
 ## Schedule Configuration
 
-The email is scheduled to send **every day at 9:00 AM IST**.
+The email is scheduled to send **every day at 6:00 PM IST**.
 
 To change the schedule, edit `server/src/services/scheduler.ts`:
 ```typescript
 // Change this line (cron format: minute hour day month weekday)
-const cronSchedule = '30 3 * * *'; // 3:30 AM UTC = 9:00 AM IST
+const cronSchedule = '30 12 * * *'; // 12:30 PM UTC = 6:00 PM IST
 ```
 
 Examples:
+- `30 12 * * *` - 6:00 PM IST (12:30 PM UTC) **[CURRENT]**
 - `30 3 * * *` - 9:00 AM IST (3:30 AM UTC)
 - `0 9 * * *` - 2:30 PM IST (9:00 AM UTC)
 - `0 0 * * *` - 5:30 AM IST (12:00 AM UTC)
@@ -116,6 +126,26 @@ The automated email includes:
 6. **Blocked or Slow Moving Items** - Critical issues (highlighted in red)
 7. **Other Operational Updates** - General updates
 8. **Focus for the Next Few Days** - Auto-generated priorities
+
+## AI-Powered Intelligent Summaries
+
+When `GEMINI_API_KEY` is configured, the system uses Google's Gemini AI to generate **intelligent, context-aware summaries** instead of simple keyword matching.
+
+**Benefits of AI-powered summaries:**
+- **Smart categorization**: AI understands context and categorizes updates accurately
+- **Professional writing**: Generates executive-level summaries with specific details
+- **Comprehensive analysis**: Combines related updates from the same task
+- **Priority detection**: Identifies critical issues and urgent items automatically
+- **Financial context**: Includes deal values, pricing, and cost information
+- **Action-oriented**: Focuses on what executives need to know to make decisions
+
+**Example AI-generated bullet point:**
+> "B4U Bhojpuri movies progressed with song recording initiated today after lyrics approval from Sandeep"
+
+vs. **Keyword-based bullet point:**
+> "B4U Bhojpuri movies - Song recording started"
+
+**Fallback**: If no API key is provided, the system automatically falls back to keyword-based analysis.
 
 ## How It Works
 

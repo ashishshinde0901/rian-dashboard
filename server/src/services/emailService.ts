@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { SalesTask, AsanaComment } from '../types/index.js';
+import { GeminiService } from './geminiService.js';
 
 interface DailyUpdateSection {
   changesSinceYesterday: string[];
@@ -13,25 +15,59 @@ interface DailyUpdateSection {
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private resend: Resend | null = null;
+  private geminiService: GeminiService | null;
+  private useResend: boolean = false;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    // Check if using Resend (if RESEND_API_KEY is provided)
+    const resendApiKey = process.env.RESEND_API_KEY || process.env.EMAIL_PASSWORD;
+
+    if (resendApiKey && resendApiKey.startsWith('re_')) {
+      // Using Resend
+      this.resend = new Resend(resendApiKey);
+      this.useResend = true;
+      console.log('📧 Email service using Resend');
+    } else {
+      // Using SMTP (nodemailer)
+      this.transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.EMAIL_PORT || '587'),
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+      console.log('📧 Email service using SMTP');
+    }
+
+    // Initialize Gemini service if API key is available
+    try {
+      this.geminiService = new GeminiService();
+      console.log('✨ Gemini AI service initialized for intelligent summaries');
+    } catch (error) {
+      console.log('⚠️  Gemini API key not found. Using keyword-based analysis.');
+      this.geminiService = null;
+    }
   }
 
   /**
    * Generate daily intelligence update email from Sales Initiative tasks
    */
   async sendDailyUpdate(tasks: SalesTask[]): Promise<void> {
-    const sections = this.analyzeTasks(tasks);
+    let sections: DailyUpdateSection;
+
+    // Use Gemini AI if available, otherwise fall back to keyword-based analysis
+    if (this.geminiService) {
+      console.log('🤖 Generating AI-powered intelligent summary...');
+      sections = await this.geminiService.generateDailyUpdate(tasks);
+    } else {
+      console.log('📊 Generating keyword-based summary...');
+      sections = this.analyzeTasks(tasks);
+    }
+
     const emailContent = this.generateEmailHTML(sections);
 
     const recipientEmails = (process.env.RECIPIENT_EMAILS || '').split(',').filter(Boolean);
@@ -47,12 +83,28 @@ export class EmailService {
       year: 'numeric',
     });
 
-    await this.transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: recipientEmails.join(', '),
-      subject: `Media Squad – Daily Execution Intelligence Update – ${today}`,
-      html: emailContent,
-    });
+    const subject = `Media Squad – Daily Execution Intelligence Update – ${today}`;
+    const fromEmail = process.env.EMAIL_USER || 'noreply@rian.io';
+
+    if (this.useResend && this.resend) {
+      // Send via Resend
+      await this.resend.emails.send({
+        from: fromEmail,
+        to: recipientEmails,
+        subject: subject,
+        html: emailContent,
+      });
+    } else if (this.transporter) {
+      // Send via SMTP
+      await this.transporter.sendMail({
+        from: fromEmail,
+        to: recipientEmails.join(', '),
+        subject: subject,
+        html: emailContent,
+      });
+    } else {
+      throw new Error('No email service configured');
+    }
 
     console.log(`✅ Daily update email sent to: ${recipientEmails.join(', ')}`);
   }
@@ -188,6 +240,24 @@ export class EmailService {
    */
   private deduplicate(items: string[]): string[] {
     return Array.from(new Set(items));
+  }
+
+  /**
+   * Generate email preview without sending
+   */
+  async generatePreview(tasks: SalesTask[]): Promise<string> {
+    let sections: DailyUpdateSection;
+
+    // Use Gemini AI if available, otherwise fall back to keyword-based analysis
+    if (this.geminiService) {
+      console.log('🤖 Generating AI-powered preview...');
+      sections = await this.geminiService.generateDailyUpdate(tasks);
+    } else {
+      console.log('📊 Generating keyword-based preview...');
+      sections = this.analyzeTasks(tasks);
+    }
+
+    return this.generateEmailHTML(sections);
   }
 
   /**
