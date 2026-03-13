@@ -61,8 +61,13 @@ export class EmailService {
 
     // Use Gemini AI if available, otherwise fall back to keyword-based analysis
     if (this.geminiService) {
-      console.log('🤖 Generating AI-powered intelligent summary...');
-      sections = await this.geminiService.generateDailyUpdate(tasks);
+      try {
+        console.log('🤖 Generating AI-powered intelligent summary...');
+        sections = await this.geminiService.generateDailyUpdate(tasks);
+      } catch (error) {
+        console.error('⚠️  Gemini AI failed, falling back to keyword-based analysis:', error);
+        sections = this.analyzeTasks(tasks);
+      }
     } else {
       console.log('📊 Generating keyword-based summary...');
       sections = this.analyzeTasks(tasks);
@@ -250,8 +255,13 @@ export class EmailService {
 
     // Use Gemini AI if available, otherwise fall back to keyword-based analysis
     if (this.geminiService) {
-      console.log('🤖 Generating AI-powered preview...');
-      sections = await this.geminiService.generateDailyUpdate(tasks);
+      try {
+        console.log('🤖 Generating AI-powered preview...');
+        sections = await this.geminiService.generateDailyUpdate(tasks);
+      } catch (error) {
+        console.error('⚠️  Gemini AI failed, falling back to keyword-based analysis:', error);
+        sections = this.analyzeTasks(tasks);
+      }
     } else {
       console.log('📊 Generating keyword-based preview...');
       sections = this.analyzeTasks(tasks);
