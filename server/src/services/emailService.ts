@@ -31,20 +31,26 @@ export class EmailService {
       console.log('📧 Email service using Resend');
     } else {
       // Using SMTP (nodemailer)
+      // Use Gmail's IPv4 address directly to avoid Railway IPv6 issues
+      const smtpHost = process.env.EMAIL_HOST || '74.125.133.109'; // smtp.gmail.com IPv4
+
       this.transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        host: smtpHost,
         port: parseInt(process.env.EMAIL_PORT || '587'),
         secure: false,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASSWORD,
         },
-        // Force IPv4 to avoid Railway IPv6 issues
-        dnsTimeout: 10000,
+        tls: {
+          rejectUnauthorized: true,
+          servername: 'smtp.gmail.com', // For TLS certificate validation
+        },
+        connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 30000,
       } as any);
-      console.log('📧 Email service using SMTP');
+      console.log(`📧 Email service using SMTP (host: ${smtpHost})`);
     }
 
     // Initialize Gemini service if API key is available
