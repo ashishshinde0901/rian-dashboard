@@ -93,12 +93,24 @@ export class EmailService {
 
     if (this.useResend && this.resend) {
       // Send via Resend
-      await this.resend.emails.send({
-        from: fromEmail,
-        to: recipientEmails,
-        subject: subject,
-        html: emailContent,
-      });
+      console.log('📤 Sending via Resend...');
+      console.log('From:', fromEmail);
+      console.log('To:', recipientEmails);
+      console.log('Subject:', subject);
+
+      try {
+        const result = await this.resend.emails.send({
+          from: fromEmail,
+          to: recipientEmails,
+          subject: subject,
+          html: emailContent,
+        });
+        console.log('✅ Resend response:', JSON.stringify(result, null, 2));
+      } catch (error: any) {
+        console.error('❌ Resend error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        throw error;
+      }
     } else if (this.transporter) {
       // Send via SMTP
       await this.transporter.sendMail({
