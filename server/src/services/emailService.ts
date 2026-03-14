@@ -300,189 +300,111 @@ export class EmailService {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 40px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.7;
+      color: #1f2937;
+      background-color: #f3f4f6;
       margin: 0;
+      padding: 20px;
     }
-    .email-wrapper {
-      max-width: 600px;
+    .email-container {
+      max-width: 650px;
       margin: 0 auto;
       background: #ffffff;
-      border-radius: 16px;
+      border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      padding: 48px 40px;
-      text-align: center;
-      position: relative;
-    }
-    .header::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    }
-    .header .date {
-      font-size: 13px;
-      color: #9ca3af;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      padding: 32px 40px;
+      border-bottom: 3px solid #667eea;
     }
     .header h1 {
-      font-size: 26px;
-      font-weight: 700;
       color: #ffffff;
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-    .header .subtitle {
-      font-size: 14px;
-      color: #667eea;
+      font-size: 24px;
       font-weight: 600;
+      margin: 0 0 8px 0;
+    }
+    .header .date {
+      color: #94a3b8;
+      font-size: 14px;
+      margin: 0;
     }
     .content {
       padding: 40px;
-      background: #fafbfc;
     }
-    .section-grid {
-      display: grid;
-      gap: 20px;
+    .section {
+      margin-bottom: 32px;
     }
-    .section-card {
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      border: 1px solid #e5e7eb;
-      transition: transform 0.2s;
-    }
-    .section-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #f3f4f6;
-    }
-    .section-badge {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #ffffff;
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 700;
-      margin-right: 12px;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-    }
-    .section-title {
-      font-size: 16px;
-      font-weight: 700;
+    .section h2 {
       color: #1f2937;
-      line-height: 1.3;
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
     }
-    .item-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: 10px;
-    }
-    .item {
-      padding: 14px 16px;
-      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
-      border-left: 3px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 14px;
-      line-height: 1.6;
+    .section-content {
       color: #374151;
-      position: relative;
+      font-size: 15px;
+      line-height: 1.8;
+      margin: 0;
     }
-    .milestone-card {
-      border: 2px solid #93c5fd;
-      background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+    .section-content p {
+      margin: 0 0 12px 0;
     }
-    .milestone-card .section-badge {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    .section-content p:last-child {
+      margin-bottom: 0;
     }
-    .milestone-card .item {
-      background: #ffffff;
-      border-left-color: #3b82f6;
+    .highlight {
+      background: #fef3c7;
+      padding: 2px 6px;
+      border-radius: 3px;
     }
-    .blocked-card {
-      border: 2px solid #fca5a5;
-      background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
+    .milestone {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 4px;
     }
-    .blocked-card .section-badge {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-    }
-    .blocked-card .item {
-      background: #ffffff;
-      border-left-color: #ef4444;
-    }
-    .focus-card {
-      border: 2px solid #fcd34d;
-      background: linear-gradient(135deg, #fef3c7 0%, #fefce8 100%);
-    }
-    .focus-card .section-badge {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
-    }
-    .focus-card .item {
-      background: #ffffff;
-      border-left-color: #f59e0b;
+    .blocked {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 4px;
     }
     .footer {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      padding: 32px 40px;
+      background: #f9fafb;
+      padding: 24px 40px;
       text-align: center;
+      border-top: 1px solid #e5e7eb;
     }
     .footer p {
+      color: #6b7280;
       font-size: 13px;
-      color: #9ca3af;
       margin: 0;
     }
     .footer a {
       color: #667eea;
       text-decoration: none;
-      font-weight: 600;
-    }
-    .footer a:hover {
-      color: #764ba2;
     }
     @media only screen and (max-width: 600px) {
-      body { padding: 20px 10px; }
-      .header { padding: 32px 24px; }
-      .content { padding: 24px; }
-      .header h1 { font-size: 22px; }
-      .section-card { padding: 20px; }
+      body { padding: 10px; }
+      .header, .content, .footer { padding: 24px; }
     }
   </style>
 </head>
 <body>
-  <div class="email-wrapper">
+  <div class="email-container">
     <div class="header">
-      <div class="date">${today}</div>
       <h1>Daily Intelligence Update</h1>
-      <div class="subtitle">Media Squad · Rian.io</div>
+      <p class="date">${today}</p>
     </div>
     <div class="content">
-      <div class="section-grid">
 `;
 
     if (sections.changesSinceYesterday.length > 0) {
@@ -537,7 +459,6 @@ export class EmailService {
     }
 
     html += `
-      </div>
     </div>
     <div class="footer">
       <p>Powered by AI Intelligence · <a href="https://rian.io">Rian.io</a></p>
@@ -550,7 +471,7 @@ export class EmailService {
   }
 
   /**
-   * Create a section card in the email
+   * Create a section with paragraph format
    */
   private createSection(
     number: string,
@@ -558,24 +479,21 @@ export class EmailService {
     items: string[],
     type: 'default' | 'milestone' | 'blocked' | 'focus' = 'default'
   ): string {
-    const cardClass =
-      type === 'default'
-        ? 'section-card'
-        : type === 'milestone'
-        ? 'section-card milestone-card'
-        : type === 'blocked'
-        ? 'section-card blocked-card'
-        : 'section-card focus-card';
+    const sectionClass = type === 'milestone' || type === 'blocked' ? type : '';
+    const wrappedContent = sectionClass
+      ? `<div class="${sectionClass}">
+        <h2>${number}. ${title}</h2>
+        <div class="section-content">
+          ${items.map((item) => `<p>• ${item}</p>`).join('')}
+        </div>
+      </div>`
+      : `<div class="section">
+        <h2>${number}. ${title}</h2>
+        <div class="section-content">
+          ${items.map((item) => `<p>• ${item}</p>`).join('')}
+        </div>
+      </div>`;
 
-    return `
-    <div class="${cardClass}">
-      <div class="section-header">
-        <span class="section-badge">${number}</span>
-        <div class="section-title">${title}</div>
-      </div>
-      <ul class="item-list">
-        ${items.map((item) => `<li class="item">${item}</li>`).join('')}
-      </ul>
-    </div>`;
+    return wrappedContent;
   }
 }
