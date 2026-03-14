@@ -302,173 +302,187 @@ export class EmailService {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #1f2937;
-      background-color: #f9fafb;
-      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
       margin: 0;
     }
-    .email-container {
-      max-width: 680px;
+    .email-wrapper {
+      max-width: 600px;
       margin: 0 auto;
-      background-color: #ffffff;
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
     .header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: #ffffff;
-      padding: 40px 32px;
-      text-align: left;
-      border-bottom: 4px solid #3b82f6;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 48px 40px;
+      text-align: center;
+      position: relative;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    .header .date {
+      font-size: 13px;
+      color: #9ca3af;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
     }
     .header h1 {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 700;
+      color: #ffffff;
       margin-bottom: 8px;
       letter-spacing: -0.5px;
     }
-    .header .date {
-      font-size: 14px;
-      color: #94a3b8;
-      font-weight: 400;
-      margin-bottom: 4px;
-    }
     .header .subtitle {
-      font-size: 13px;
-      color: #64748b;
-      margin-top: 8px;
+      font-size: 14px;
+      color: #667eea;
+      font-weight: 600;
     }
     .content {
-      padding: 32px;
+      padding: 40px;
+      background: #fafbfc;
     }
-    .section {
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #e5e7eb;
+    .section-grid {
+      display: grid;
+      gap: 20px;
     }
-    .section:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
+    .section-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid #e5e7eb;
+      transition: transform 0.2s;
     }
     .section-header {
       display: flex;
       align-items: center;
       margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f3f4f6;
     }
-    .section-number {
-      background: #f1f5f9;
-      color: #475569;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
+    .section-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       margin-right: 12px;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
-    .section h2 {
-      font-size: 18px;
-      font-weight: 600;
-      color: #0f172a;
-      margin: 0;
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1f2937;
       line-height: 1.3;
     }
-    .section ul {
+    .item-list {
       list-style: none;
       margin: 0;
       padding: 0;
+      display: grid;
+      gap: 10px;
     }
-    .section li {
-      padding: 12px 16px;
-      margin-bottom: 8px;
-      background: #f8fafc;
-      border-left: 3px solid #cbd5e1;
-      border-radius: 6px;
+    .item {
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+      border-left: 3px solid #d1d5db;
+      border-radius: 8px;
       font-size: 14px;
       line-height: 1.6;
-      color: #334155;
+      color: #374151;
+      position: relative;
     }
-    .section li:last-child {
-      margin-bottom: 0;
+    .milestone-card {
+      border: 2px solid #93c5fd;
+      background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
     }
-    .milestone {
-      background: #f0f9ff;
-      padding: 24px;
-      border-radius: 8px;
-      border: 1px solid #bae6fd;
-      margin-bottom: 32px;
+    .milestone-card .section-badge {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
     }
-    .milestone .section-number {
-      background: #dbeafe;
-      color: #1e40af;
-    }
-    .milestone li {
+    .milestone-card .item {
       background: #ffffff;
-      border-left: 3px solid #3b82f6;
+      border-left-color: #3b82f6;
     }
-    .blocked {
-      background: #fef2f2;
-      padding: 24px;
-      border-radius: 8px;
-      border: 1px solid #fecaca;
-      margin-bottom: 32px;
+    .blocked-card {
+      border: 2px solid #fca5a5;
+      background: linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%);
     }
-    .blocked .section-number {
-      background: #fee2e2;
-      color: #991b1b;
+    .blocked-card .section-badge {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
     }
-    .blocked li {
+    .blocked-card .item {
       background: #ffffff;
-      border-left: 3px solid #ef4444;
+      border-left-color: #ef4444;
     }
-    .focus {
-      background: #fefce8;
-      padding: 24px;
-      border-radius: 8px;
-      border: 1px solid #fde047;
-      margin-bottom: 0;
+    .focus-card {
+      border: 2px solid #fcd34d;
+      background: linear-gradient(135deg, #fef3c7 0%, #fefce8 100%);
     }
-    .focus .section-number {
-      background: #fef3c7;
-      color: #92400e;
+    .focus-card .section-badge {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
     }
-    .focus li {
+    .focus-card .item {
       background: #ffffff;
-      border-left: 3px solid #eab308;
+      border-left-color: #f59e0b;
     }
     .footer {
-      background: #f8fafc;
-      padding: 24px 32px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 32px 40px;
       text-align: center;
-      border-top: 1px solid #e5e7eb;
     }
     .footer p {
-      font-size: 12px;
-      color: #64748b;
+      font-size: 13px;
+      color: #9ca3af;
       margin: 0;
     }
     .footer a {
-      color: #3b82f6;
+      color: #667eea;
       text-decoration: none;
+      font-weight: 600;
+    }
+    .footer a:hover {
+      color: #764ba2;
     }
     @media only screen and (max-width: 600px) {
+      body { padding: 20px 10px; }
       .header { padding: 32px 24px; }
       .content { padding: 24px; }
-      .header h1 { font-size: 24px; }
+      .header h1 { font-size: 22px; }
+      .section-card { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div class="email-container">
+  <div class="email-wrapper">
     <div class="header">
       <div class="date">${today}</div>
-      <h1>Media Squad – Daily Intelligence Update</h1>
-      <div class="subtitle">Powered by Rian.io</div>
+      <h1>Daily Intelligence Update</h1>
+      <div class="subtitle">Media Squad · Rian.io</div>
     </div>
     <div class="content">
+      <div class="section-grid">
 `;
 
     if (sections.changesSinceYesterday.length > 0) {
@@ -523,9 +537,10 @@ export class EmailService {
     }
 
     html += `
+      </div>
     </div>
     <div class="footer">
-      <p>Generated with AI-powered intelligence by <a href="https://rian.io">Rian.io</a></p>
+      <p>Powered by AI Intelligence · <a href="https://rian.io">Rian.io</a></p>
     </div>
   </div>
 </body>
@@ -535,7 +550,7 @@ export class EmailService {
   }
 
   /**
-   * Create a section in the email
+   * Create a section card in the email
    */
   private createSection(
     number: string,
@@ -543,16 +558,24 @@ export class EmailService {
     items: string[],
     type: 'default' | 'milestone' | 'blocked' | 'focus' = 'default'
   ): string {
-    const sectionClass = type === 'default' ? 'section' : `section ${type}`;
+    const cardClass =
+      type === 'default'
+        ? 'section-card'
+        : type === 'milestone'
+        ? 'section-card milestone-card'
+        : type === 'blocked'
+        ? 'section-card blocked-card'
+        : 'section-card focus-card';
+
     return `
-  <div class="${sectionClass}">
-    <div class="section-header">
-      <span class="section-number">${number}</span>
-      <h2>${title}</h2>
-    </div>
-    <ul>
-      ${items.map((item) => `<li>${item}</li>`).join('')}
-    </ul>
-  </div>`;
+    <div class="${cardClass}">
+      <div class="section-header">
+        <span class="section-badge">${number}</span>
+        <div class="section-title">${title}</div>
+      </div>
+      <ul class="item-list">
+        ${items.map((item) => `<li class="item">${item}</li>`).join('')}
+      </ul>
+    </div>`;
   }
 }
