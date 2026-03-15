@@ -36,17 +36,15 @@ export class GeminiService {
 
     // Prepare task data for Gemini
     const taskData = tasks.map((task) => {
-      // Get all "Update:" comments
-      const updateComments = task.comments
-        .filter((c) => c.text.trim().toLowerCase().startsWith('update:'))
-        .map((c) => ({
-          text: c.text.replace(/^update:\s*/i, '').trim(),
-          created_at: c.created_at,
-          author: c.created_by?.name || 'Unknown',
-        }));
+      // Get ALL comments (not just ones starting with "Update:")
+      const allComments = task.comments.map((c) => ({
+        text: c.text.trim(),
+        created_at: c.created_at,
+        author: c.created_by?.name || 'Unknown',
+      }));
 
-      // Get recent updates (last 24 hours)
-      const recentUpdates = updateComments.filter((c) => {
+      // Get recent comments (last 24 hours)
+      const recentComments = allComments.filter((c) => {
         const commentDate = new Date(c.created_at);
         return commentDate >= yesterday;
       });
@@ -57,8 +55,8 @@ export class GeminiService {
         completed: task.completed,
         dealValue: task.deal_value,
         expectedStartDate: task.expected_start_date,
-        allUpdates: updateComments,
-        recentUpdates: recentUpdates,
+        allUpdates: allComments,
+        recentUpdates: recentComments,
       };
     });
 
