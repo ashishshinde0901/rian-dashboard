@@ -5,7 +5,9 @@ import { config } from './config.js';
 import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
 import emailRoutes from './routes/email.js';
+import deliveryRoutes from './routes/delivery.js';
 import { SchedulerService } from './services/scheduler.js';
+import { initializeDatabase } from './db/database.js';
 
 const app = express();
 
@@ -40,15 +42,29 @@ app.use(
 app.use('/auth', authRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/delivery', deliveryRoutes);
 
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
-app.listen(config.port, () => {
-  console.log(`🚀 Server running on http://localhost:${config.port}`);
-  console.log(`📊 Frontend URL: ${config.frontendUrl}`);
-  console.log(`🔐 OAuth Redirect: ${config.asana.redirectUri}`);
+// Initialize database and start server
+const startServer = async () => {
+  try {
+    // Initialize database schema
+    await initializeDatabase();
 
-  // Start daily email scheduler
-  SchedulerService.startDailyEmailScheduler();
-});
+    app.listen(config.port, () => {
+      console.log(`🚀 Server running on http://localhost:${config.port}`);
+      console.log(`📊 Frontend URL: ${config.frontendUrl}`);
+      console.log(`🔐 OAuth Redirect: ${config.asana.redirectUri}`);
+
+      // Start daily email scheduler
+      SchedulerService.startDailyEmailScheduler();
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
