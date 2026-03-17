@@ -60,7 +60,6 @@ router.get('/dashboard', async (req, res) => {
 
     res.json({
       tasks: enrichedTasks,
-      customField: dashboard.customField,
     });
   } catch (error: any) {
     console.error('Error fetching delivery dashboard:', error);
