@@ -39,11 +39,11 @@ const CorporateDeliveryDashboard = () => {
 
       const projectsData = await projectsRes.json();
       const corporateProject = projectsData.projects.find(
-        (proj: any) => proj.name === 'Corporate'
+        (proj: any) => proj.name === 'Corporate Revenue Squad'
       );
 
       if (!corporateProject) {
-        throw new Error('Corporate project not found');
+        throw new Error('Corporate Revenue Squad project not found');
       }
 
       // Step 3: Fetch custom fields for the workspace
