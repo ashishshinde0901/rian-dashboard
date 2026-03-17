@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Header from './Header';
 import TaskTable from './TaskTable';
+import DeliveryTable from './DeliveryTable';
 import LoadingSpinner from './LoadingSpinner';
 import { DashboardResponse } from '../types';
 
@@ -15,9 +16,11 @@ const Dashboard = () => {
   const [useRoleView, setUseRoleView] = useState<boolean>(false); // Toggle for admins/heads
 
   const [tasks, setTasks] = useState<DashboardResponse | null>(null);
+  const [deliveryTasks, setDeliveryTasks] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<string | null>(null);
+  const [isDeliveryView, setIsDeliveryView] = useState(false);
 
   // Check if user has a privileged role
   const isPrivilegedUser = user?.role && user.role !== 'user';
@@ -49,8 +52,15 @@ const Dashboard = () => {
       .then((r) => r.json())
       .then((data) => {
         setCustomFields(data.customFields);
-        // Auto-select first field if available
-        if (data.customFields.length > 0) {
+        // Auto-select "Function" field if available
+        const functionField = data.customFields.find((f: any) => f.name === 'Function');
+        if (functionField) {
+          setSelectedField(functionField.gid);
+          if (functionField.enum_options.length > 0) {
+            setSelectedOption(functionField.enum_options[0].gid);
+          }
+        } else if (data.customFields.length > 0) {
+          // Fallback to first field
           setSelectedField(data.customFields[0].gid);
           if (data.customFields[0].enum_options.length > 0) {
             setSelectedOption(data.customFields[0].enum_options[0].gid);
@@ -59,6 +69,19 @@ const Dashboard = () => {
       })
       .catch(console.error);
   }, [selectedWorkspace]);
+
+  // Detect if "Delivery" option is selected
+  useEffect(() => {
+    if (!selectedField || !selectedOption) {
+      setIsDeliveryView(false);
+      return;
+    }
+
+    const selectedFieldData = customFields.find(f => f.gid === selectedField);
+    const selectedOptionData = selectedFieldData?.enum_options.find((o: any) => o.gid === selectedOption);
+
+    setIsDeliveryView(selectedOptionData?.name?.toLowerCase() === 'delivery');
+  }, [selectedField, selectedOption, customFields]);
 
   // Fetch tasks when workspace and filter change
   const fetchTasks = async () => {
@@ -100,23 +123,48 @@ const Dashboard = () => {
     setError(null);
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/tasks/${selectedWorkspace}/filter?customFieldGid=${selectedField}&optionGid=${selectedOption}`,
-        { credentials: 'include' }
-      );
+      // Check if this is delivery view
+      if (isDeliveryView) {
+        // Fetch delivery tasks
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/delivery/dashboard?workspaceGid=${selectedWorkspace}&customFieldGid=${selectedField}&optionGid=${selectedOption}`,
+          { credentials: 'include' }
+        );
 
-      if (!res.ok) {
-        if (res.status === 401) {
-          window.location.href = '/login';
-          return;
+        if (!res.ok) {
+          if (res.status === 401) {
+            window.location.href = '/login';
+            return;
+          }
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to fetch delivery tasks');
         }
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to fetch tasks');
-      }
 
-      const data: DashboardResponse = await res.json();
-      setTasks(data);
-      setLastFetched(data.last_fetched);
+        const data = await res.json();
+        setDeliveryTasks(data);
+        setTasks(null); // Clear regular tasks
+        setLastFetched(new Date().toISOString());
+      } else {
+        // Fetch regular tasks
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/tasks/${selectedWorkspace}/filter?customFieldGid=${selectedField}&optionGid=${selectedOption}`,
+          { credentials: 'include' }
+        );
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            window.location.href = '/login';
+            return;
+          }
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to fetch tasks');
+        }
+
+        const data: DashboardResponse = await res.json();
+        setTasks(data);
+        setDeliveryTasks(null); // Clear delivery tasks
+        setLastFetched(data.last_fetched);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -126,7 +174,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchTasks();
-  }, [selectedWorkspace, selectedField, selectedOption, useRoleView]);
+  }, [selectedWorkspace, selectedField, selectedOption, useRoleView, isDeliveryView]);
 
   // Get options for selected field
   const selectedFieldOptions = customFields.find(f => f.gid === selectedField)?.enum_options || [];
@@ -252,7 +300,8 @@ const Dashboard = () => {
           )}
         </div>
 
-        {tasks && (
+        {/* Stats for regular tasks */}
+        {tasks && !isDeliveryView && (
           <div className="grid grid-cols-4 gap-4 mb-6">
             <StatCard label="Total Tasks" value={tasks.total_tasks} />
             <StatCard label="Completed" value={tasks.tasks.filter((t) => t.completed).length} />
@@ -267,11 +316,31 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Stats for delivery tasks */}
+        {deliveryTasks && isDeliveryView && (
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <StatCard label="Total Deliveries" value={deliveryTasks.tasks.length} />
+            <StatCard label="Completed" value={deliveryTasks.tasks.filter((t: any) => t.completed).length} />
+            <StatCard label="In Progress" value={deliveryTasks.tasks.filter((t: any) => !t.completed).length} />
+            <StatCard label="Overdue" value={
+              deliveryTasks.tasks.filter((t: any) => {
+                if (t.completed || !t.due_on) return false;
+                return new Date(t.due_on) < new Date();
+              }).length
+            } />
+          </div>
+        )}
+
         {loading && <LoadingSpinner />}
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>
         )}
-        {tasks && <TaskTable tasks={tasks.tasks} />}
+
+        {/* Regular tasks table */}
+        {tasks && !isDeliveryView && <TaskTable tasks={tasks.tasks} />}
+
+        {/* Delivery tasks table */}
+        {deliveryTasks && isDeliveryView && <DeliveryTable tasks={deliveryTasks.tasks} onUpdate={fetchTasks} />}
       </main>
     </div>
   );
