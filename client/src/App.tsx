@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
+import DeliveryDashboard from './components/DeliveryDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -25,6 +26,10 @@ function App() {
         <Route
           path="/"
           element={authenticated ? <Dashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/delivery"
+          element={authenticated ? <DeliveryDashboard /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>

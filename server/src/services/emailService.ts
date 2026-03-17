@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { SalesTask, AsanaComment } from '../types/index.js';
-import { GeminiService } from './geminiService.js';
+import { GeminiService, DeliveryTask, DeliveryIntelligence } from './geminiService.js';
 
 interface DailyUpdateSection {
   changesSinceYesterday: string[];
@@ -54,16 +54,23 @@ export class EmailService {
   }
 
   /**
-   * Generate daily intelligence update email from Sales Initiative tasks
+   * Generate daily intelligence update email from Sales Initiative tasks and optional Delivery tasks
    */
-  async sendDailyUpdate(tasks: SalesTask[]): Promise<void> {
+  async sendDailyUpdate(tasks: SalesTask[], deliveryTasks?: DeliveryTask[]): Promise<void> {
     let sections: DailyUpdateSection;
+    let deliveryIntel: DeliveryIntelligence | null = null;
 
     // Use Gemini AI if available, otherwise fall back to keyword-based analysis
     if (this.geminiService) {
       try {
-        console.log('🤖 Generating AI-powered intelligent summary...');
+        console.log('🤖 Generating AI-powered intelligent summary for sales tasks...');
         sections = await this.geminiService.generateDailyUpdate(tasks);
+
+        // Generate delivery intelligence if delivery tasks are provided
+        if (deliveryTasks && deliveryTasks.length > 0) {
+          console.log('📦 Generating AI-powered delivery intelligence...');
+          deliveryIntel = await this.geminiService.generateDeliveryIntelligence(deliveryTasks);
+        }
       } catch (error) {
         console.error('⚠️  Gemini AI failed, falling back to keyword-based analysis:', error);
         sections = this.analyzeTasks(tasks);
@@ -73,7 +80,7 @@ export class EmailService {
       sections = this.analyzeTasks(tasks);
     }
 
-    const emailContent = this.generateEmailHTML(sections);
+    const emailContent = this.generateEmailHTML(sections, deliveryIntel);
 
     const recipientEmails = (process.env.RECIPIENT_EMAILS || '').split(',').filter(Boolean);
 
@@ -285,7 +292,7 @@ export class EmailService {
   /**
    * Generate HTML email content
    */
-  private generateEmailHTML(sections: DailyUpdateSection): string {
+  private generateEmailHTML(sections: DailyUpdateSection, deliveryIntel?: DeliveryIntelligence | null): string {
     const today = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -456,6 +463,37 @@ export class EmailService {
         sections.upcomingFocus,
         'focus'
       );
+    }
+
+    // Add Delivery Intelligence sections if available
+    if (deliveryIntel) {
+      html += `
+        <div style="margin: 40px 0; padding-top: 32px; border-top: 3px solid #667eea;">
+          <h2 style="color: #667eea; font-size: 19px; font-weight: 700; margin: 0 0 24px 0;">
+            📦 Delivery Management Intelligence
+          </h2>
+        </div>
+      `;
+
+      if (deliveryIntel.upcomingDeliveries.length > 0) {
+        html += this.createSection('9', 'Upcoming Deliveries (Next 7 Days)', deliveryIntel.upcomingDeliveries);
+      }
+
+      if (deliveryIntel.overdueOrAtRisk.length > 0) {
+        html += this.createSection('10', 'Overdue or At-Risk Projects', deliveryIntel.overdueOrAtRisk, 'blocked');
+      }
+
+      if (deliveryIntel.marginAnalysis.length > 0) {
+        html += this.createSection('11', 'Margin Analysis & Profitability', deliveryIntel.marginAnalysis);
+      }
+
+      if (deliveryIntel.qualityInsights.length > 0) {
+        html += this.createSection('12', 'Quality & Client Feedback', deliveryIntel.qualityInsights);
+      }
+
+      if (deliveryIntel.deliveryVelocity.length > 0) {
+        html += this.createSection('13', 'Delivery Velocity & Trends', deliveryIntel.deliveryVelocity, 'milestone');
+      }
     }
 
     html += `

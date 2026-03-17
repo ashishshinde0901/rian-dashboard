@@ -12,6 +12,36 @@ interface DailyUpdateSection {
   upcomingFocus: string[];
 }
 
+export interface DeliveryTask {
+  gid: string;
+  name: string;
+  task_status: string | null;
+  due_on: string | null;
+  completed: boolean;
+  committed_delivery_date: string | null;
+  planned_margin: number | null;
+  actual_margin: number | null;
+  comments: Array<{
+    text: string;
+    created_at: string;
+    created_by?: { name: string };
+  }>;
+  subtasks?: Array<{
+    gid: string;
+    name: string;
+    completed: boolean;
+    due_on: string | null;
+  }>;
+}
+
+export interface DeliveryIntelligence {
+  upcomingDeliveries: string[];
+  overdueOrAtRisk: string[];
+  marginAnalysis: string[];
+  qualityInsights: string[];
+  deliveryVelocity: string[];
+}
+
 export class GeminiService {
   private genAI: GoogleGenerativeAI;
   private model: any;
@@ -196,6 +226,156 @@ Now analyze the data and generate the intelligence report.`;
       console.error('Error parsing AI response:', error);
       console.error('Raw response:', text);
       throw new Error('Failed to parse AI response');
+    }
+  }
+
+  /**
+   * Generate delivery intelligence report for management
+   */
+  async generateDeliveryIntelligence(deliveryTasks: DeliveryTask[]): Promise<DeliveryIntelligence> {
+    const today = new Date();
+    const next7Days = new Date();
+    next7Days.setDate(today.getDate() + 7);
+
+    // Prepare delivery task data for Gemini
+    const taskData = deliveryTasks.map((task) => {
+      const allComments = task.comments.map((c) => ({
+        text: c.text.trim(),
+        created_at: c.created_at,
+        author: c.created_by?.name || 'Unknown',
+      }));
+
+      // Calculate subtask completion
+      const totalSubtasks = task.subtasks?.length || 0;
+      const completedSubtasks = task.subtasks?.filter(s => s.completed).length || 0;
+      const subtaskProgress = totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : 'N/A';
+
+      return {
+        name: task.name,
+        status: task.task_status || 'Unknown',
+        completed: task.completed,
+        dueOn: task.due_on,
+        committedDeliveryDate: task.committed_delivery_date,
+        plannedMargin: task.planned_margin,
+        actualMargin: task.actual_margin,
+        subtaskProgress,
+        subtasks: task.subtasks || [],
+        comments: allComments,
+      };
+    });
+
+    const prompt = this.buildDeliveryPrompt(taskData);
+
+    try {
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      return this.parseDeliveryResponse(text);
+    } catch (error) {
+      console.error('Error calling Gemini API for delivery intelligence:', error);
+      throw new Error('Failed to generate delivery intelligence');
+    }
+  }
+
+  /**
+   * Build prompt for delivery intelligence
+   */
+  private buildDeliveryPrompt(taskData: any[]): string {
+    const tasksJSON = JSON.stringify(taskData, null, 2);
+
+    return `You are a delivery management analyst for Media Squad. Your job is to analyze delivery projects and provide executive intelligence on delivery timelines, risks, margins, and quality.
+
+**INPUT DATA:**
+${tasksJSON}
+
+**YOUR TASK:**
+Analyze all delivery projects and create a management intelligence report with 5 focused sections. Provide SPECIFIC, ACTIONABLE insights for management decision-making.
+
+**CRITICAL INSTRUCTIONS:**
+1. Use EXACT project names from the data
+2. Include SPECIFIC dates, margin percentages, and metrics
+3. Focus on RISKS, TRENDS, and ACTIONABLE ITEMS
+4. Identify patterns across projects (timeline slippage, margin erosion, quality issues)
+5. Use URGENT language for critical items
+6. Compare planned vs actual margins when both are available
+7. Analyze subtask completion to predict delivery risks
+8. Look for quality-related keywords in comments: "bug", "issue", "rework", "revision", "feedback"
+
+**OUTPUT FORMAT:**
+Return ONLY a JSON object with this exact structure (no markdown, no code blocks, just raw JSON):
+
+{
+  "upcomingDeliveries": [
+    "Project name - Due/committed date, current status, subtask completion %, any risks or blockers"
+  ],
+  "overdueOrAtRisk": [
+    "CRITICAL: Project name - Days overdue OR risk factor, impact, immediate action needed"
+  ],
+  "marginAnalysis": [
+    "Project name - Planned margin X%, Actual margin Y%, variance analysis, profitability insight"
+  ],
+  "qualityInsights": [
+    "Project name - Quality issue/feedback details, rework required, client satisfaction status"
+  ],
+  "deliveryVelocity": [
+    "Overall delivery trends, completion rates, timeline adherence, capacity insights"
+  ]
+}
+
+**SECTION GUIDELINES:**
+
+1. **Upcoming Deliveries (Next 7 Days)**: Projects due soon with readiness assessment.
+   Example: "Mitesh Hollywood Localization - Due Mar 20 (3 days), 80% subtasks complete, on track"
+
+2. **Overdue or At Risk**: CRITICAL section - overdue projects or those at risk of missing deadlines.
+   Example: "CRITICAL: Invesco Translations - 5 days overdue, blocked awaiting client feedback, revenue at risk"
+
+3. **Margin Analysis**: Compare planned vs actual margins, identify profitability concerns.
+   Example: "CodieBlock Pilot - Planned margin 25%, Actual margin 12%, -13% variance due to rework costs"
+
+4. **Quality Insights**: Client feedback, revisions, quality issues from comments.
+   Example: "TV Tokyo Gintama - Multiple QC revision rounds, client requested subtitle timing adjustments"
+
+5. **Delivery Velocity & Trends**: Overall delivery performance metrics and patterns.
+   Example: "70% of projects meeting committed dates, average margin erosion of 5% due to scope creep"
+
+**IMPORTANT:**
+- If a section has no relevant data, return an empty array []
+- Focus on projects with recent activity or upcoming deadlines
+- Highlight margin variances > 10%
+- Flag overdue items as CRITICAL
+- Analyze comment sentiment for quality issues
+
+Now analyze the delivery data and generate the intelligence report.`;
+  }
+
+  /**
+   * Parse delivery intelligence response
+   */
+  private parseDeliveryResponse(text: string): DeliveryIntelligence {
+    try {
+      // Remove markdown code blocks if present
+      let cleanText = text.trim();
+      if (cleanText.startsWith('```json')) {
+        cleanText = cleanText.replace(/```json\n?/, '').replace(/\n?```$/, '');
+      } else if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/```\n?/, '').replace(/\n?```$/, '');
+      }
+
+      const parsed = JSON.parse(cleanText);
+
+      return {
+        upcomingDeliveries: parsed.upcomingDeliveries || [],
+        overdueOrAtRisk: parsed.overdueOrAtRisk || [],
+        marginAnalysis: parsed.marginAnalysis || [],
+        qualityInsights: parsed.qualityInsights || [],
+        deliveryVelocity: parsed.deliveryVelocity || [],
+      };
+    } catch (error) {
+      console.error('Error parsing delivery intelligence response:', error);
+      console.error('Raw response:', text);
+      throw new Error('Failed to parse delivery intelligence response');
     }
   }
 }
