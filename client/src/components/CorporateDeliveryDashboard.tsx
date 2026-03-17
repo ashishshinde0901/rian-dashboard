@@ -86,9 +86,15 @@ const CorporateDeliveryDashboard = () => {
         throw new Error(err.error || 'Failed to fetch delivery tasks');
       }
 
-      const data = await tasksRes.json();
+      const tasksData = await tasksRes.json();
+
+      // Transform to delivery format with empty metrics (since DATABASE_URL not configured on Railway)
+      const data = {
+        tasks: tasksData.tasks || []
+      };
+
       setDeliveryTasks(data);
-      setLastFetched(new Date().toISOString());
+      setLastFetched(tasksData.last_fetched);
     } catch (err: any) {
       setError(err.message);
     } finally {

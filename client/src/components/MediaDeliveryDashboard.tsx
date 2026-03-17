@@ -71,7 +71,7 @@ const MediaDeliveryDashboard = () => {
         throw new Error('Delivery option not found');
       }
 
-      // Step 5: Fetch tasks from project filtered by Function=Delivery
+      // Step 5: Fetch tasks from project filtered by Function=Delivery (using regular endpoint for now)
       const tasksRes = await fetch(
         `${import.meta.env.VITE_API_URL}/api/tasks/project/${mediaProject.gid}/filter?customFieldGid=${functionField.gid}&optionGid=${deliveryOption.gid}`,
         { credentials: 'include' }
@@ -86,9 +86,15 @@ const MediaDeliveryDashboard = () => {
         throw new Error(err.error || 'Failed to fetch delivery tasks');
       }
 
-      const data = await tasksRes.json();
+      const tasksData = await tasksRes.json();
+
+      // Transform to delivery format with empty metrics (since DATABASE_URL not configured on Railway)
+      const data = {
+        tasks: tasksData.tasks || []
+      };
+
       setDeliveryTasks(data);
-      setLastFetched(new Date().toISOString());
+      setLastFetched(tasksData.last_fetched);
     } catch (err: any) {
       setError(err.message);
     } finally {
