@@ -89,8 +89,23 @@ const CorporateDeliveryDashboard = () => {
       const tasksData = await tasksRes.json();
 
       // Transform to delivery format with empty metrics (since DATABASE_URL not configured on Railway)
+      // Also extract update comments from regular comments
+      const enrichedTasks = (tasksData.tasks || []).map((task: any) => ({
+        ...task,
+        committed_delivery_date: null,
+        planned_margin: null,
+        actual_margin: null,
+        updateComments: (task.comments || [])
+          .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
+          .map((c: any) => ({
+            text: c.text.replace(/^update:\s*/i, '').trim(),
+            created_at: c.created_at,
+            author: c.created_by?.name || 'Unknown',
+          })),
+      }));
+
       const data = {
-        tasks: tasksData.tasks || []
+        tasks: enrichedTasks
       };
 
       setDeliveryTasks(data);
