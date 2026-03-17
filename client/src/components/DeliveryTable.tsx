@@ -19,14 +19,24 @@ interface DeliveryTask {
 interface DeliveryTableProps {
   tasks: DeliveryTask[];
   onUpdate: () => void;
+  userEmail?: string; // For admin check
 }
 
-const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
+const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
   const [editingCell, setEditingCell] = useState<{ taskGid: string; field: string } | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<Set<string>>(new Set());
 
+  // Check if user is admin (has access to edit database fields)
+  const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim().toLowerCase());
+  const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail.toLowerCase().trim()) : false;
+
   const saveMetric = async (taskGid: string, projectName: string, field: string, value: any) => {
+    if (!isAdmin) {
+      alert('Only admins can edit this field');
+      return;
+    }
+
     setSaving(prev => new Set(prev).add(taskGid));
 
     try {
@@ -94,16 +104,16 @@ const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
                 Project Name
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Committed Date
+                Due Date
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                Committed Date {isAdmin && <span className="text-blue-600">*</span>}
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Planned Margin
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Actual Margin
+                Margin {isAdmin && <span className="text-blue-600">*</span>}
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Comments (Update:)
@@ -118,7 +128,12 @@ const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
                   {task.name}
                 </td>
 
-                {/* Committed Delivery Date - Editable */}
+                {/* Due Date (from Asana, read-only) */}
+                <td className="px-4 py-3 text-sm text-gray-600">
+                  {formatDate(task.due_on)}
+                </td>
+
+                {/* Committed Delivery Date - Editable (Admin only) */}
                 <td className="px-4 py-3 text-sm">
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'committed_delivery_date' ? (
                     <input
@@ -136,8 +151,8 @@ const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
                     />
                   ) : (
                     <div
-                      onClick={() => setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
-                      className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
+                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
                     >
                       {formatDate(task.committed_delivery_date)}
                       {saving.has(task.gid) && <span className="ml-2 text-xs text-gray-400">Saving...</span>}
@@ -158,7 +173,7 @@ const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
                   </span>
                 </td>
 
-                {/* Planned Margin - Editable */}
+                {/* Margin - Editable (Admin only) */}
                 <td className="px-4 py-3 text-sm">
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'planned_margin' ? (
                     <input
@@ -177,37 +192,10 @@ const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
                     />
                   ) : (
                     <div
-                      onClick={() => setEditingCell({ taskGid: task.gid, field: 'planned_margin' })}
-                      className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'planned_margin' })}
+                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
                     >
                       {task.planned_margin ? `${task.planned_margin}%` : '-'}
-                    </div>
-                  )}
-                </td>
-
-                {/* Actual Margin - Editable */}
-                <td className="px-4 py-3 text-sm">
-                  {editingCell?.taskGid === task.gid && editingCell?.field === 'actual_margin' ? (
-                    <input
-                      type="number"
-                      step="0.01"
-                      defaultValue={task.actual_margin || ''}
-                      autoFocus
-                      className="border border-indigo-500 rounded px-2 py-1 text-sm w-24"
-                      onBlur={(e) => saveMetric(task.gid, task.name, 'actual_margin', e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          saveMetric(task.gid, task.name, 'actual_margin', e.currentTarget.value);
-                        }
-                        if (e.key === 'Escape') setEditingCell(null);
-                      }}
-                    />
-                  ) : (
-                    <div
-                      onClick={() => setEditingCell({ taskGid: task.gid, field: 'actual_margin' })}
-                      className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
-                    >
-                      {task.actual_margin ? `${task.actual_margin}%` : '-'}
                     </div>
                   )}
                 </td>
@@ -247,6 +235,11 @@ const DeliveryTable = ({ tasks, onUpdate }: DeliveryTableProps) => {
       {tasks.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No delivery tasks found
+        </div>
+      )}
+      {isAdmin && (
+        <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-700">
+          <span className="text-blue-600">*</span> Admin access: You can edit these fields
         </div>
       )}
     </div>

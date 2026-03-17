@@ -147,7 +147,7 @@ const MediaDeliveryDashboard = () => {
           <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>
         )}
 
-        {deliveryTasks && <DeliveryTable tasks={deliveryTasks.tasks} onUpdate={fetchTasks} />}
+        {deliveryTasks && <DeliveryTable tasks={deliveryTasks.tasks} onUpdate={fetchTasks} userEmail={user?.email} />}
       </main>
     </div>
   );
