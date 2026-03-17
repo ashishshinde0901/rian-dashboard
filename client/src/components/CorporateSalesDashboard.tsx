@@ -18,24 +18,38 @@ const CorporateSalesDashboard = () => {
     setError(null);
 
     try {
-      // Step 1: Fetch workspaces and find "Corporate"
+      // Step 1: Fetch workspaces (get first workspace)
       const workspacesRes = await fetch(`${import.meta.env.VITE_API_URL}/api/workspaces`, {
         credentials: 'include'
       });
       if (!workspacesRes.ok) throw new Error('Failed to fetch workspaces');
 
       const workspacesData = await workspacesRes.json();
-      const corporateWorkspace = workspacesData.workspaces.find(
-        (ws: any) => ws.name === 'Corporate'
-      );
+      const workspace = workspacesData.workspaces[0]; // Get first workspace
 
-      if (!corporateWorkspace) {
-        throw new Error('Corporate workspace not found');
+      if (!workspace) {
+        throw new Error('No workspace found');
       }
 
-      // Step 2: Fetch custom fields for the workspace
+      // Step 2: Fetch projects and find "Corporate" project
+      const projectsRes = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/projects/${workspace.gid}`,
+        { credentials: 'include' }
+      );
+      if (!projectsRes.ok) throw new Error('Failed to fetch projects');
+
+      const projectsData = await projectsRes.json();
+      const corporateProject = projectsData.projects.find(
+        (proj: any) => proj.name === 'Corporate'
+      );
+
+      if (!corporateProject) {
+        throw new Error('Corporate project not found');
+      }
+
+      // Step 3: Fetch custom fields for the workspace
       const customFieldsRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/custom-fields/${corporateWorkspace.gid}`,
+        `${import.meta.env.VITE_API_URL}/api/custom-fields/${workspace.gid}`,
         { credentials: 'include' }
       );
       if (!customFieldsRes.ok) throw new Error('Failed to fetch custom fields');
@@ -49,7 +63,7 @@ const CorporateSalesDashboard = () => {
         throw new Error('Function custom field not found');
       }
 
-      // Step 3: Find "Sales Initiative" option
+      // Step 4: Find "Sales Initiative" option
       const salesOption = functionField.enum_options.find(
         (option: any) => option.name === 'Sales Initiative'
       );
@@ -58,9 +72,9 @@ const CorporateSalesDashboard = () => {
         throw new Error('Sales Initiative option not found');
       }
 
-      // Step 4: Fetch tasks with the resolved GIDs
+      // Step 5: Fetch tasks from project filtered by Function=Sales Initiative
       const tasksRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/tasks/${corporateWorkspace.gid}/filter?customFieldGid=${functionField.gid}&optionGid=${salesOption.gid}`,
+        `${import.meta.env.VITE_API_URL}/api/tasks/project/${corporateProject.gid}/filter?customFieldGid=${functionField.gid}&optionGid=${salesOption.gid}`,
         { credentials: 'include' }
       );
 

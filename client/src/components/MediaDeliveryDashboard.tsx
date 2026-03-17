@@ -17,24 +17,38 @@ const MediaDeliveryDashboard = () => {
     setError(null);
 
     try {
-      // Step 1: Fetch workspaces and find "Media Squad"
+      // Step 1: Fetch workspaces (get first workspace)
       const workspacesRes = await fetch(`${import.meta.env.VITE_API_URL}/api/workspaces`, {
         credentials: 'include'
       });
       if (!workspacesRes.ok) throw new Error('Failed to fetch workspaces');
 
       const workspacesData = await workspacesRes.json();
-      const mediaWorkspace = workspacesData.workspaces.find(
-        (ws: any) => ws.name === 'Media Squad'
-      );
+      const workspace = workspacesData.workspaces[0]; // Get first workspace
 
-      if (!mediaWorkspace) {
-        throw new Error('Media Squad workspace not found');
+      if (!workspace) {
+        throw new Error('No workspace found');
       }
 
-      // Step 2: Fetch custom fields for the workspace
+      // Step 2: Fetch projects and find "Media Squad" project
+      const projectsRes = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/projects/${workspace.gid}`,
+        { credentials: 'include' }
+      );
+      if (!projectsRes.ok) throw new Error('Failed to fetch projects');
+
+      const projectsData = await projectsRes.json();
+      const mediaProject = projectsData.projects.find(
+        (proj: any) => proj.name === 'Media Squad'
+      );
+
+      if (!mediaProject) {
+        throw new Error('Media Squad project not found');
+      }
+
+      // Step 3: Fetch custom fields for the workspace
       const customFieldsRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/custom-fields/${mediaWorkspace.gid}`,
+        `${import.meta.env.VITE_API_URL}/api/custom-fields/${workspace.gid}`,
         { credentials: 'include' }
       );
       if (!customFieldsRes.ok) throw new Error('Failed to fetch custom fields');
@@ -48,7 +62,7 @@ const MediaDeliveryDashboard = () => {
         throw new Error('Function custom field not found');
       }
 
-      // Step 3: Find "Delivery" option
+      // Step 4: Find "Delivery" option
       const deliveryOption = functionField.enum_options.find(
         (option: any) => option.name === 'Delivery'
       );
@@ -57,9 +71,9 @@ const MediaDeliveryDashboard = () => {
         throw new Error('Delivery option not found');
       }
 
-      // Step 4: Fetch delivery tasks with the resolved GIDs
+      // Step 5: Fetch tasks from project filtered by Function=Delivery
       const tasksRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/delivery/dashboard?workspaceGid=${mediaWorkspace.gid}&customFieldGid=${functionField.gid}&optionGid=${deliveryOption.gid}`,
+        `${import.meta.env.VITE_API_URL}/api/tasks/project/${mediaProject.gid}/filter?customFieldGid=${functionField.gid}&optionGid=${deliveryOption.gid}`,
         { credentials: 'include' }
       );
 
