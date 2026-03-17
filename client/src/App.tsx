@@ -1,7 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './components/LoginPage';
-import Dashboard from './components/Dashboard';
+import MediaSalesDashboard from './components/MediaSalesDashboard';
+import MediaDeliveryDashboard from './components/MediaDeliveryDashboard';
+import CorporateSalesDashboard from './components/CorporateSalesDashboard';
+import CorporateDeliveryDashboard from './components/CorporateDeliveryDashboard';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -20,11 +23,27 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={authenticated ? <Navigate to="/" /> : <LoginPage />}
+          element={authenticated ? <Navigate to="/media-sales" /> : <LoginPage />}
         />
         <Route
           path="/"
-          element={authenticated ? <Dashboard /> : <Navigate to="/login" />}
+          element={<Navigate to="/media-sales" />}
+        />
+        <Route
+          path="/media-sales"
+          element={authenticated ? <MediaSalesDashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/media-delivery"
+          element={authenticated ? <MediaDeliveryDashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/corporate-sales"
+          element={authenticated ? <CorporateSalesDashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/corporate-delivery"
+          element={authenticated ? <CorporateDeliveryDashboard /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>

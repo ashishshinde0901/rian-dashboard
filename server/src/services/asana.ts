@@ -17,6 +17,77 @@ export class AsanaService {
     return data.data;
   }
 
+  // ─── Get all projects for a workspace ───
+  async getProjects(workspaceGid: string) {
+    const { data } = await this.api.get(`/projects`, {
+      params: {
+        workspace: workspaceGid,
+        opt_fields: 'name,gid',
+        limit: 100
+      }
+    });
+    return data.data;
+  }
+
+  // ─── Get tasks for a specific project filtered by custom field ───
+  async getTasksByProjectAndFilter(
+    projectGid: string,
+    customFieldGid: string,
+    optionGid: string
+  ): Promise<DashboardResponse> {
+    console.log(`\nFetching tasks for project ${projectGid} with custom field ${customFieldGid} = ${optionGid}...`);
+
+    const { data } = await this.api.get(`/projects/${projectGid}/tasks`, {
+      params: {
+        opt_fields: [
+          'name',
+          'assignee.name',
+          'assignee.photo.image_60x60',
+          'modified_at',
+          'notes',
+          'completed',
+          'permalink_url',
+          'custom_fields',
+        ].join(','),
+        limit: 100,
+      },
+    });
+
+    console.log(`Found ${data.data.length} total tasks in project, filtering by custom field...`);
+
+    // Filter tasks by custom field option
+    const filtered = data.data.filter((task: any) => {
+      if (!task.custom_fields || !Array.isArray(task.custom_fields)) {
+        return false;
+      }
+
+      const customField = task.custom_fields.find((cf: any) => cf.gid === customFieldGid);
+      if (!customField) return false;
+
+      // For enum fields, check if value matches
+      if (customField.enum_value && customField.enum_value.gid === optionGid) {
+        return true;
+      }
+
+      // For multi_enum fields, check if the option is in the array
+      if (customField.multi_enum_values && Array.isArray(customField.multi_enum_values)) {
+        return customField.multi_enum_values.some((val: any) => val.gid === optionGid);
+      }
+
+      return false;
+    });
+
+    console.log(`Filtered to ${filtered.length} matching tasks\n`);
+
+    // Get project details
+    const projectRes = await this.api.get(`/projects/${projectGid}`, {
+      params: { opt_fields: 'name,workspace.gid' }
+    });
+    const project = projectRes.data.data;
+
+    return this.enrichTasks(filtered, project.workspace.gid);
+  }
+
   // ─── Get all custom fields for a workspace ───
   async getCustomFields(workspaceGid: string) {
     const { data } = await this.api.get(`/workspaces/${workspaceGid}/custom_fields`, {

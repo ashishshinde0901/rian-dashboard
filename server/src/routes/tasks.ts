@@ -33,6 +33,46 @@ router.get('/custom-fields/:workspaceGid', requireAuth, async (req, res) => {
   }
 });
 
+// Get projects for a workspace
+router.get('/projects/:workspaceGid', requireAuth, async (req, res) => {
+  try {
+    const asana = new AsanaService(req.session.asana!.accessToken);
+    const projects = await asana.getProjects(req.params.workspaceGid);
+    res.json({ projects });
+  } catch (error: any) {
+    console.error('Error fetching projects:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Get tasks filtered by project and custom field
+router.get('/tasks/project/:projectGid/filter', requireAuth, async (req, res) => {
+  try {
+    const { customFieldGid, optionGid } = req.query;
+
+    if (!customFieldGid || !optionGid) {
+      return res.status(400).json({
+        error: 'Missing required query parameters: customFieldGid and optionGid'
+      });
+    }
+
+    const asana = new AsanaService(req.session.asana!.accessToken);
+    const data = await asana.getTasksByProjectAndFilter(
+      req.params.projectGid,
+      customFieldGid as string,
+      optionGid as string
+    );
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching project tasks:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
 // Get tasks filtered by custom field
 router.get('/tasks/:workspaceGid/filter', requireAuth, async (req, res) => {
   try {
