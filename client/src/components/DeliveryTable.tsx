@@ -28,7 +28,13 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
   const [saving, setSaving] = useState<Set<string>>(new Set());
 
   // Check if user is admin (has access to edit database fields)
-  const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '').split(',').map((e: string) => e.trim().toLowerCase());
+  // Using super admin emails: nikhil.naik@rian.io, ashish.shinde@rian.io, anand@rian.io, pmo@rian.io
+  const ADMIN_EMAILS = [
+    'nikhil.naik@rian.io',
+    'ashish.shinde@rian.io',
+    'anand@rian.io',
+    'pmo@rian.io'
+  ];
   const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail.toLowerCase().trim()) : false;
 
   const saveMetric = async (taskGid: string, projectName: string, field: string, value: any) => {
