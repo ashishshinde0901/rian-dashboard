@@ -418,7 +418,7 @@ router.get('/dashboard/media-delivery', requireAuth, async (req, res) => {
         committed_delivery_date: metric?.committed_delivery_date || null,
         planned_margin: metric?.planned_margin || null,
         actual_margin: metric?.actual_margin || null,
-        project_value: metric?.project_value || null,
+        cost: metric?.cost || null,
         updateComments: task.comments
           .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
           .map((c: any) => ({
@@ -499,7 +499,7 @@ router.get('/dashboard/corporate-delivery', requireAuth, async (req, res) => {
         committed_delivery_date: metric?.committed_delivery_date || null,
         planned_margin: metric?.planned_margin || null,
         actual_margin: metric?.actual_margin || null,
-        project_value: metric?.project_value || null,
+        cost: metric?.cost || null,
         updateComments: task.comments
           .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
           .map((c: any) => ({

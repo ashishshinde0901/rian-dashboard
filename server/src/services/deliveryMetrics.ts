@@ -7,7 +7,7 @@ export interface DeliveryMetric {
   committed_delivery_date?: string | null;
   planned_margin?: number | null;
   actual_margin?: number | null;
-  project_value?: number | null;
+  cost?: number | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -55,7 +55,7 @@ export class DeliveryMetricsService {
 
       const result = await pool.query(
         `INSERT INTO delivery_metrics
-          (asana_task_gid, project_name, committed_delivery_date, planned_margin, actual_margin, project_value, updated_at)
+          (asana_task_gid, project_name, committed_delivery_date, planned_margin, actual_margin, cost, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
         ON CONFLICT (asana_task_gid)
         DO UPDATE SET
@@ -63,7 +63,7 @@ export class DeliveryMetricsService {
           committed_delivery_date = EXCLUDED.committed_delivery_date,
           planned_margin = EXCLUDED.planned_margin,
           actual_margin = EXCLUDED.actual_margin,
-          project_value = EXCLUDED.project_value,
+          cost = EXCLUDED.cost,
           updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
@@ -72,7 +72,7 @@ export class DeliveryMetricsService {
           metric.committed_delivery_date || null,
           metric.planned_margin || null,
           metric.actual_margin || null,
-          metric.project_value || null,
+          metric.cost || null,
         ]
       );
 
