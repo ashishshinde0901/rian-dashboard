@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { AsanaService } from '../services/asana.js';
 import { getUserRole, getRoleFunctionFilter } from '../config.js';
+import { DeliveryMetricsService } from '../services/deliveryMetrics.js';
 
 const router = Router();
 
@@ -234,6 +235,264 @@ router.get('/tasks/:taskGid/comments', requireAuth, async (req, res) => {
     res.json({ comments });
   } catch (error: any) {
     console.error('Error fetching comments:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Optimized endpoint for Media Sales Dashboard
+router.get('/dashboard/media-sales', requireAuth, async (req, res) => {
+  try {
+    const asana = new AsanaService(req.session.asana!.accessToken);
+
+    // Get first workspace
+    const workspaces = await asana.getWorkspaces();
+    if (!workspaces || workspaces.length === 0) {
+      return res.status(404).json({ error: 'No workspace found' });
+    }
+    const workspace = workspaces[0];
+
+    // Get projects and find Media Squad
+    const projects = await asana.getProjects(workspace.gid);
+    const mediaProject = projects.find((proj: any) => proj.name === 'Media Squad');
+
+    if (!mediaProject) {
+      const availableProjects = projects.map((p: any) => p.name).join(', ');
+      return res.status(404).json({
+        error: `Media Squad project not found. Available projects: ${availableProjects}`
+      });
+    }
+
+    // Get custom fields and find Function field and Sales Initiative option
+    const customFields = await asana.getCustomFields(workspace.gid);
+    const functionField = customFields.find((field: any) => field.name === 'Function');
+
+    if (!functionField) {
+      return res.status(404).json({ error: 'Function custom field not found' });
+    }
+
+    const salesOption = functionField.enum_options.find((option: any) => option.name === 'Sales Initiative');
+
+    if (!salesOption) {
+      return res.status(404).json({ error: 'Sales Initiative option not found' });
+    }
+
+    // Fetch tasks
+    const data = await asana.getTasksByProjectAndFilter(
+      mediaProject.gid,
+      functionField.gid,
+      salesOption.gid
+    );
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching Media Sales dashboard:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Optimized endpoint for Corporate Sales Dashboard
+router.get('/dashboard/corporate-sales', requireAuth, async (req, res) => {
+  try {
+    const asana = new AsanaService(req.session.asana!.accessToken);
+
+    // Get first workspace
+    const workspaces = await asana.getWorkspaces();
+    if (!workspaces || workspaces.length === 0) {
+      return res.status(404).json({ error: 'No workspace found' });
+    }
+    const workspace = workspaces[0];
+
+    // Get projects and find Corporate Revenue Squad
+    const projects = await asana.getProjects(workspace.gid);
+    const corporateProject = projects.find((proj: any) => proj.name === 'Corporate Revenue Squad');
+
+    if (!corporateProject) {
+      const availableProjects = projects.map((p: any) => p.name).join(', ');
+      return res.status(404).json({
+        error: `Corporate Revenue Squad project not found. Available projects: ${availableProjects}`
+      });
+    }
+
+    // Get custom fields and find Function field and Sales Initiative option
+    const customFields = await asana.getCustomFields(workspace.gid);
+    const functionField = customFields.find((field: any) => field.name === 'Function');
+
+    if (!functionField) {
+      return res.status(404).json({ error: 'Function custom field not found' });
+    }
+
+    const salesOption = functionField.enum_options.find((option: any) => option.name === 'Sales Initiative');
+
+    if (!salesOption) {
+      return res.status(404).json({ error: 'Sales Initiative option not found' });
+    }
+
+    // Fetch tasks
+    const data = await asana.getTasksByProjectAndFilter(
+      corporateProject.gid,
+      functionField.gid,
+      salesOption.gid
+    );
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching Corporate Sales dashboard:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Optimized endpoint for Media Delivery Dashboard
+router.get('/dashboard/media-delivery', requireAuth, async (req, res) => {
+  try {
+    const asana = new AsanaService(req.session.asana!.accessToken);
+
+    // Get first workspace
+    const workspaces = await asana.getWorkspaces();
+    if (!workspaces || workspaces.length === 0) {
+      return res.status(404).json({ error: 'No workspace found' });
+    }
+    const workspace = workspaces[0];
+
+    // Get projects and find Media Squad
+    const projects = await asana.getProjects(workspace.gid);
+    const mediaProject = projects.find((proj: any) => proj.name === 'Media Squad');
+
+    if (!mediaProject) {
+      const availableProjects = projects.map((p: any) => p.name).join(', ');
+      return res.status(404).json({
+        error: `Media Squad project not found. Available projects: ${availableProjects}`
+      });
+    }
+
+    // Get custom fields and find Function field and Delivery option
+    const customFields = await asana.getCustomFields(workspace.gid);
+    const functionField = customFields.find((field: any) => field.name === 'Function');
+
+    if (!functionField) {
+      return res.status(404).json({ error: 'Function custom field not found' });
+    }
+
+    const deliveryOption = functionField.enum_options.find((option: any) => option.name === 'Delivery');
+
+    if (!deliveryOption) {
+      return res.status(404).json({ error: 'Delivery option not found' });
+    }
+
+    // Fetch tasks
+    const data = await asana.getTasksByProjectAndFilter(
+      mediaProject.gid,
+      functionField.gid,
+      deliveryOption.gid
+    );
+
+    // Fetch delivery metrics for all tasks
+    const taskGids = data.tasks.map((task: any) => task.gid);
+    const metricsMap = await DeliveryMetricsService.getMetricsForTasks(taskGids);
+
+    // Enrich tasks with metrics
+    const enrichedTasks = data.tasks.map((task: any) => {
+      const metric = metricsMap.get(task.gid);
+      return {
+        ...task,
+        committed_delivery_date: metric?.committed_delivery_date || null,
+        planned_margin: metric?.planned_margin || null,
+        actual_margin: metric?.actual_margin || null,
+        project_value: metric?.project_value || null,
+        updateComments: task.comments
+          .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
+          .map((c: any) => ({
+            text: c.text.replace(/^update:\s*/i, '').trim(),
+            created_at: c.created_at,
+            author: c.created_by?.name || 'Unknown',
+          })),
+      };
+    });
+
+    res.json({ ...data, tasks: enrichedTasks });
+  } catch (error: any) {
+    console.error('Error fetching Media Delivery dashboard:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: error.message,
+    });
+  }
+});
+
+// Optimized endpoint for Corporate Delivery Dashboard
+router.get('/dashboard/corporate-delivery', requireAuth, async (req, res) => {
+  try {
+    const asana = new AsanaService(req.session.asana!.accessToken);
+
+    // Get first workspace
+    const workspaces = await asana.getWorkspaces();
+    if (!workspaces || workspaces.length === 0) {
+      return res.status(404).json({ error: 'No workspace found' });
+    }
+    const workspace = workspaces[0];
+
+    // Get projects and find Corporate Revenue Squad
+    const projects = await asana.getProjects(workspace.gid);
+    const corporateProject = projects.find((proj: any) => proj.name === 'Corporate Revenue Squad');
+
+    if (!corporateProject) {
+      const availableProjects = projects.map((p: any) => p.name).join(', ');
+      return res.status(404).json({
+        error: `Corporate Revenue Squad project not found. Available projects: ${availableProjects}`
+      });
+    }
+
+    // Get custom fields and find Function field and Delivery option
+    const customFields = await asana.getCustomFields(workspace.gid);
+    const functionField = customFields.find((field: any) => field.name === 'Function');
+
+    if (!functionField) {
+      return res.status(404).json({ error: 'Function custom field not found' });
+    }
+
+    const deliveryOption = functionField.enum_options.find((option: any) => option.name === 'Delivery');
+
+    if (!deliveryOption) {
+      return res.status(404).json({ error: 'Delivery option not found' });
+    }
+
+    // Fetch tasks
+    const data = await asana.getTasksByProjectAndFilter(
+      corporateProject.gid,
+      functionField.gid,
+      deliveryOption.gid
+    );
+
+    // Fetch delivery metrics for all tasks
+    const taskGids = data.tasks.map((task: any) => task.gid);
+    const metricsMap = await DeliveryMetricsService.getMetricsForTasks(taskGids);
+
+    // Enrich tasks with metrics
+    const enrichedTasks = data.tasks.map((task: any) => {
+      const metric = metricsMap.get(task.gid);
+      return {
+        ...task,
+        committed_delivery_date: metric?.committed_delivery_date || null,
+        planned_margin: metric?.planned_margin || null,
+        actual_margin: metric?.actual_margin || null,
+        project_value: metric?.project_value || null,
+        updateComments: task.comments
+          .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
+          .map((c: any) => ({
+            text: c.text.replace(/^update:\s*/i, '').trim(),
+            created_at: c.created_at,
+            author: c.created_by?.name || 'Unknown',
+          })),
+      };
+    });
+
+    res.json({ ...data, tasks: enrichedTasks });
+  } catch (error: any) {
+    console.error('Error fetching Corporate Delivery dashboard:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
       error: error.message,
     });
