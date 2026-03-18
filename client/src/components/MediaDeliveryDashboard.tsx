@@ -89,21 +89,44 @@ const MediaDeliveryDashboard = () => {
 
       const tasksData = await tasksRes.json();
 
-      // Transform to delivery format with empty metrics (since DATABASE_URL not configured on Railway)
-      // Also extract update comments from regular comments
-      const enrichedTasks = (tasksData.tasks || []).map((task: any) => ({
-        ...task,
-        committed_delivery_date: null,
-        planned_margin: null,
-        actual_margin: null,
-        updateComments: (task.comments || [])
-          .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
-          .map((c: any) => ({
-            text: c.text.replace(/^update:\s*/i, '').trim(),
-            created_at: c.created_at,
-            author: c.created_by?.name || 'Unknown',
-          })),
-      }));
+      // Step 6: Fetch delivery metrics from database for all tasks
+      const taskGids = (tasksData.tasks || []).map((t: any) => t.gid);
+      const metricsMap = new Map();
+
+      // Fetch metrics for each task
+      for (const gid of taskGids) {
+        try {
+          const metricRes = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/delivery/metrics/${gid}`,
+            { credentials: 'include' }
+          );
+          if (metricRes.ok) {
+            const metric = await metricRes.json();
+            metricsMap.set(gid, metric);
+          }
+        } catch (err) {
+          // Metric doesn't exist for this task, that's okay
+          console.log(`No metric found for task ${gid}`);
+        }
+      }
+
+      // Transform to delivery format merging Asana data with database metrics
+      const enrichedTasks = (tasksData.tasks || []).map((task: any) => {
+        const metric = metricsMap.get(task.gid);
+        return {
+          ...task,
+          committed_delivery_date: metric?.committed_delivery_date || null,
+          planned_margin: metric?.planned_margin || null,
+          actual_margin: metric?.actual_margin || null,
+          updateComments: (task.comments || [])
+            .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
+            .map((c: any) => ({
+              text: c.text.replace(/^update:\s*/i, '').trim(),
+              created_at: c.created_at,
+              author: c.created_by?.name || 'Unknown',
+            })),
+        };
+      });
 
       const data = {
         tasks: enrichedTasks
