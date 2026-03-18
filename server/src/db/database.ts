@@ -51,9 +51,23 @@ export const initializeDatabase = async (): Promise<void> => {
         committed_delivery_date DATE,
         planned_margin DECIMAL(10, 2),
         actual_margin DECIMAL(10, 2),
+        project_value DECIMAL(12, 2),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Add project_value column if it doesn't exist (migration for existing databases)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='delivery_metrics' AND column_name='project_value'
+        ) THEN
+          ALTER TABLE delivery_metrics ADD COLUMN project_value DECIMAL(12, 2);
+        END IF;
+      END $$;
     `);
 
     // Create index for faster lookups

@@ -9,6 +9,7 @@ interface DeliveryTask {
   committed_delivery_date: string | null;
   planned_margin: number | null;
   actual_margin: number | null;
+  project_value: number | null;
   updateComments: Array<{
     text: string;
     created_at: string;
@@ -69,6 +70,10 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         aVal = a.planned_margin || 0;
         bVal = b.planned_margin || 0;
         break;
+      case 'project_value':
+        aVal = a.project_value || 0;
+        bVal = b.project_value || 0;
+        break;
       default:
         return 0;
     }
@@ -95,6 +100,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         committed_delivery_date: task?.committed_delivery_date,
         planned_margin: task?.planned_margin,
         actual_margin: task?.actual_margin,
+        project_value: task?.project_value,
         [field]: value || null,
       };
 
@@ -178,6 +184,17 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
               </th>
               <th
                 className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('project_value')}
+              >
+                <div className="flex items-center gap-1">
+                  Project Value {isAdmin && <span className="text-blue-600">*</span>}
+                  {sortConfig?.key === 'project_value' && (
+                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </div>
+              </th>
+              <th
+                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('planned_margin')}
               >
                 <div className="flex items-center gap-1">
@@ -238,6 +255,33 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   }`}>
                     {task.completed ? 'Completed' : task.task_status || 'No Status'}
                   </span>
+                </td>
+
+                {/* Project Value - Editable (Admin only) */}
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                  {editingCell?.taskGid === task.gid && editingCell?.field === 'project_value' ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      defaultValue={task.project_value || ''}
+                      autoFocus
+                      className="border border-indigo-500 rounded px-2 py-1 text-sm w-24"
+                      onBlur={(e) => saveMetric(task.gid, task.name, 'project_value', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveMetric(task.gid, task.name, 'project_value', e.currentTarget.value);
+                        }
+                        if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : (
+                    <div
+                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'project_value' })}
+                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
+                    >
+                      {task.project_value ? `₹${task.project_value.toLocaleString()}` : '-'}
+                    </div>
+                  )}
                 </td>
 
                 {/* Margin - Editable (Admin only) */}
