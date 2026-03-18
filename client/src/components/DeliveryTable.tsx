@@ -26,6 +26,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
   const [editingCell, setEditingCell] = useState<{ taskGid: string; field: string } | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<Set<string>>(new Set());
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   // Check if user is admin (has access to edit database fields)
   // Using super admin emails: nikhil.naik@rian.io, ashish.shinde@rian.io, anand@rian.io, pmo@rian.io
@@ -36,6 +37,51 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
     'pmo@rian.io'
   ];
   const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail.toLowerCase().trim()) : false;
+
+  // Sorting function
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Sort tasks
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    const { key, direction } = sortConfig;
+    let aVal: any = null;
+    let bVal: any = null;
+
+    // Get values based on key
+    switch (key) {
+      case 'name':
+        aVal = a.name?.toLowerCase() || '';
+        bVal = b.name?.toLowerCase() || '';
+        break;
+      case 'due_on':
+        aVal = a.due_on ? new Date(a.due_on).getTime() : 0;
+        bVal = b.due_on ? new Date(b.due_on).getTime() : 0;
+        break;
+      case 'committed_delivery_date':
+        aVal = a.committed_delivery_date ? new Date(a.committed_delivery_date).getTime() : 0;
+        bVal = b.committed_delivery_date ? new Date(b.committed_delivery_date).getTime() : 0;
+        break;
+      case 'planned_margin':
+        aVal = a.planned_margin || 0;
+        bVal = b.planned_margin || 0;
+        break;
+      default:
+        return 0;
+    }
+
+    // Compare values
+    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const saveMetric = async (taskGid: string, projectName: string, field: string, value: any) => {
     if (!isAdmin) {
@@ -109,20 +155,52 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Project Name
+              <th
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center gap-1">
+                  Project Name
+                  {sortConfig?.key === 'name' && (
+                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Due Date
+              <th
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('due_on')}
+              >
+                <div className="flex items-center gap-1">
+                  Due Date
+                  {sortConfig?.key === 'due_on' && (
+                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Committed Date {isAdmin && <span className="text-blue-600">*</span>}
+              <th
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('committed_delivery_date')}
+              >
+                <div className="flex items-center gap-1">
+                  Committed Date {isAdmin && <span className="text-blue-600">*</span>}
+                  {sortConfig?.key === 'committed_delivery_date' && (
+                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Margin {isAdmin && <span className="text-blue-600">*</span>}
+              <th
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('planned_margin')}
+              >
+                <div className="flex items-center gap-1">
+                  Margin {isAdmin && <span className="text-blue-600">*</span>}
+                  {sortConfig?.key === 'planned_margin' && (
+                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Comments (Update:)
@@ -130,7 +208,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {tasks.map((task) => (
+            {sortedTasks.map((task) => (
               <tr key={task.gid} className="hover:bg-gray-50">
                 {/* Project Name */}
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">

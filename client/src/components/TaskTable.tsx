@@ -7,7 +7,7 @@ interface Props {
 }
 
 const TaskTable = ({ tasks }: Props) => {
-  const [sortField, setSortField] = useState<'updated_date' | 'name'>('updated_date');
+  const [sortField, setSortField] = useState<'updated_date' | 'name' | 'deal_value' | 'expected_start_date'>('updated_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +94,14 @@ const TaskTable = ({ tasks }: Props) => {
         cmp = new Date(a.updated_date).getTime() - new Date(b.updated_date).getTime();
       } else if (sortField === 'name') {
         cmp = a.name.localeCompare(b.name);
+      } else if (sortField === 'deal_value') {
+        const aVal = parseFloat(a.deal_value || '0');
+        const bVal = parseFloat(b.deal_value || '0');
+        cmp = aVal - bVal;
+      } else if (sortField === 'expected_start_date') {
+        const aDate = a.expected_start_date || '';
+        const bDate = b.expected_start_date || '';
+        cmp = aDate.localeCompare(bDate);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -156,20 +164,22 @@ const TaskTable = ({ tasks }: Props) => {
               />
             </th>
             <th
-              className="px-4 py-3 relative"
+              className="px-4 py-3 cursor-pointer hover:text-gray-900 relative"
               style={{ width: `${colWidths.dealValue}%` }}
+              onClick={() => handleSort('deal_value')}
             >
-              Deal Value
+              Deal Value <SortIcon field="deal_value" />
               <div
                 className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('dealValue', e)}
               />
             </th>
             <th
-              className="px-4 py-3 relative"
+              className="px-4 py-3 cursor-pointer hover:text-gray-900 relative"
               style={{ width: `${colWidths.startDate}%` }}
+              onClick={() => handleSort('expected_start_date')}
             >
-              Expected Start Date
+              Expected Start Date <SortIcon field="expected_start_date" />
               <div
                 className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
                 onMouseDown={(e) => handleMouseDown('startDate', e)}
