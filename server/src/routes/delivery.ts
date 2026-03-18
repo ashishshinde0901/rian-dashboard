@@ -72,13 +72,19 @@ router.get('/dashboard', async (req, res) => {
  * Create or update delivery metrics for a task
  */
 router.post('/metrics', async (req, res) => {
+  console.log('📝 POST /api/delivery/metrics - Request received');
+  console.log('Request body:', req.body);
+
   try {
     const { asana_task_gid, project_name, committed_delivery_date, planned_margin, actual_margin } =
       req.body;
 
     if (!asana_task_gid) {
+      console.log('❌ Missing asana_task_gid');
       return res.status(400).json({ error: 'asana_task_gid is required' });
     }
+
+    console.log('💾 Attempting to save metric for task:', asana_task_gid);
 
     const metric = await DeliveryMetricsService.upsertMetric({
       asana_task_gid,
@@ -88,9 +94,10 @@ router.post('/metrics', async (req, res) => {
       actual_margin: actual_margin ? parseFloat(actual_margin) : null,
     });
 
+    console.log('✅ Metric saved successfully:', metric);
     res.json(metric);
   } catch (error: any) {
-    console.error('Error saving delivery metric:', error);
+    console.error('❌ Error saving delivery metric:', error);
     res.status(500).json({ error: error.message });
   }
 });
