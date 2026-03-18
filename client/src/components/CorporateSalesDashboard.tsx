@@ -44,7 +44,8 @@ const CorporateSalesDashboard = () => {
       );
 
       if (!corporateProject) {
-        throw new Error('Corporate Revenue Squad project not found');
+        const availableProjects = projectsData.projects.map((p: any) => p.name).join(', ');
+        throw new Error(`Corporate Revenue Squad project not found. Available projects: ${availableProjects}`);
       }
 
       // Step 3: Fetch custom fields for the workspace

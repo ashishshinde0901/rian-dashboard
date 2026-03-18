@@ -43,7 +43,8 @@ const MediaDeliveryDashboard = () => {
       );
 
       if (!mediaProject) {
-        throw new Error('Media Squad project not found');
+        const availableProjects = projectsData.projects.map((p: any) => p.name).join(', ');
+        throw new Error(`Media Squad project not found. Available projects: ${availableProjects}`);
       }
 
       // Step 3: Fetch custom fields for the workspace
