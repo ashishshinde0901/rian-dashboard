@@ -69,7 +69,7 @@ const TaskTable = ({ tasks }: Props) => {
     startX.current = e.clientX;
     startWidth.current = colWidths[col as keyof typeof colWidths];
     e.preventDefault();
-    e.stopPropagation(); // Prevent triggering sort on header click
+    e.stopPropagation(); // Prevent triggering sort when dragging resize handle
   };
 
   const filtered = tasks
