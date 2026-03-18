@@ -411,6 +411,7 @@ export class AsanaService {
           let taskStatus: string | undefined = undefined;
           let dealValue: string | undefined = undefined;
           let expectedStartDate: string | undefined = undefined;
+          let closingProbability: string[] | undefined = undefined;
 
           if (task.custom_fields && Array.isArray(task.custom_fields)) {
             // Log custom fields for debugging (first task only)
@@ -461,6 +462,23 @@ export class AsanaService {
             if (startDateField && startDateField.text_value) {
               expectedStartDate = startDateField.text_value;
             }
+
+            // Extract Closing Probability - it's a multi_enum field
+            const closingProbField = task.custom_fields.find(
+              (cf: any) => {
+                const name = cf.name?.toLowerCase() || '';
+                return name === 'closing probability' ||
+                       name === 'closing probablity' ||
+                       name.includes('closing') && name.includes('prob');
+              }
+            );
+            if (closingProbField) {
+              if (closingProbField.multi_enum_values && Array.isArray(closingProbField.multi_enum_values)) {
+                closingProbability = closingProbField.multi_enum_values.map((v: any) => v.name);
+              } else if (closingProbField.enum_value?.name) {
+                closingProbability = [closingProbField.enum_value.name];
+              }
+            }
           }
 
           return {
@@ -477,6 +495,7 @@ export class AsanaService {
             task_status: taskStatus,
             deal_value: dealValue,
             expected_start_date: expectedStartDate,
+            closing_probability: closingProbability,
           };
         })
       );

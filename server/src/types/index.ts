@@ -29,6 +29,7 @@ export interface SalesTask {
   task_status?: string;          // Task Status custom field value
   deal_value?: string;           // Deal Value custom field value
   expected_start_date?: string;  // Expected Start Date custom field value
+  closing_probability?: string[]; // Closing Probability multi-enum field
 }
 
 export interface DashboardResponse {
