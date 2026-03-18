@@ -148,11 +148,11 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[600px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -163,7 +163,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 </div>
               </th>
               <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('committed_delivery_date')}
               >
                 <div className="flex items-center gap-1">
@@ -173,11 +173,11 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   )}
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Status
               </th>
               <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('planned_margin')}
               >
                 <div className="flex items-center gap-1">
@@ -187,7 +187,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   )}
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Comments (Update:)
               </th>
             </tr>
@@ -196,12 +196,12 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
             {sortedTasks.map((task) => (
               <tr key={task.gid} className="hover:bg-gray-50">
                 {/* Project Name */}
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">
                   {task.name}
                 </td>
 
                 {/* Committed Delivery Date - Editable (Admin only) */}
-                <td className="px-4 py-3 text-sm">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'committed_delivery_date' ? (
                     <input
                       type="date"
@@ -228,7 +228,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 </td>
 
                 {/* Task Status */}
-                <td className="px-4 py-3 text-sm">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                     task.completed
                       ? 'bg-green-100 text-green-800'
@@ -241,7 +241,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 </td>
 
                 {/* Margin - Editable (Admin only) */}
-                <td className="px-4 py-3 text-sm">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'planned_margin' ? (
                     <input
                       type="number"
@@ -268,7 +268,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 </td>
 
                 {/* Comments */}
-                <td className="px-4 py-3 text-sm">
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
                   {task.updateComments.length > 0 ? (
                     <div>
                       <button

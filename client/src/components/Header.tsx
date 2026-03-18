@@ -18,37 +18,38 @@ const Header = ({ user, onRefresh, lastFetched }: Props) => {
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
-      <div className="w-[90%] mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="w-full lg:w-[90%] mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
           <img
             src="https://www.rian.io/icons/rian-logo.svg"
             alt="Rian"
-            width="32"
-            height="32"
+            width="28"
+            height="28"
+            className="sm:w-8 sm:h-8"
           />
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Rian Dashboard</h1>
+            <h1 className="text-base sm:text-xl font-bold text-gray-900">Rian Dashboard</h1>
             {lastFetched && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 hidden sm:block">
                 Last updated: {formatRelativeDate(lastFetched)}
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={onRefresh}
-            className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
           >
             Refresh
           </button>
           {user && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-700">{user.name}</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="text-xs sm:text-sm text-gray-700 hidden md:inline">{user.name}</span>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Logout
               </button>

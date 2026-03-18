@@ -107,10 +107,10 @@ const MediaSalesDashboard = () => {
       <Header user={user} onRefresh={fetchTasks} lastFetched={lastFetched} />
       <DashboardNav />
 
-      <main className="w-[90%] mx-auto px-4 py-6">
+      <main className="w-full lg:w-[90%] mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {loading && <LoadingSpinner />}
         {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>
+          <div className="bg-red-50 text-red-700 p-3 sm:p-4 rounded-lg text-sm sm:text-base">{error}</div>
         )}
 
         {tasks && <TaskTable tasks={tasks.tasks} />}

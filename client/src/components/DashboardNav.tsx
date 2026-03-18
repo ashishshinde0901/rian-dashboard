@@ -11,16 +11,16 @@ const DashboardNav = () => {
   ];
 
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm">
-      <div className="w-[90%] mx-auto px-4">
-        <nav className="flex space-x-1">
+    <div className="bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
+      <div className="w-full lg:w-[90%] mx-auto px-3 sm:px-4">
+        <nav className="flex space-x-1 min-w-max sm:min-w-0">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
+                className={`px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                   isActive
                     ? 'border-indigo-600 text-indigo-600'
                     : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'

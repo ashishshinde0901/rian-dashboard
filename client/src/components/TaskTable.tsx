@@ -119,13 +119,13 @@ const TaskTable = ({ tasks }: Props) => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-gray-100">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 gap-3 sm:gap-0 border-b border-gray-100">
+        <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto">
           {(['all', 'active', 'completed'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-sm rounded-lg capitalize ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg capitalize flex-1 sm:flex-initial ${
                 filter === f
                   ? 'bg-indigo-50 text-indigo-700 font-medium'
                   : 'text-gray-500 hover:bg-gray-50'
@@ -137,16 +137,17 @@ const TaskTable = ({ tasks }: Props) => {
         </div>
         <input
           type="text"
-          placeholder="Search tasks, users, comments..."
-          className="border rounded-lg px-3 py-1.5 text-sm w-64"
+          placeholder="Search tasks..."
+          className="border rounded-lg px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm w-full sm:w-64"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
-      <table ref={tableRef} className="w-full">
-        <thead>
-          <tr className="bg-gray-50 text-left text-sm text-gray-600">
+      <div className="overflow-x-auto">
+        <table ref={tableRef} className="w-full min-w-[800px]">
+          <thead>
+            <tr className="bg-gray-50 text-left text-xs sm:text-sm text-gray-600">
             <th
               className="px-4 py-3 cursor-pointer hover:text-gray-900 relative"
               style={{ width: `${colWidths.task}%` }}
