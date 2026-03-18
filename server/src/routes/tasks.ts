@@ -244,7 +244,12 @@ router.get('/tasks/:taskGid/comments', requireAuth, async (req, res) => {
 // Optimized endpoint for Media Sales Dashboard
 router.get('/dashboard/media-sales', requireAuth, async (req, res) => {
   try {
-    const asana = new AsanaService(req.session.asana!.accessToken);
+    // Use admin token to ensure all users see the same data
+    const adminToken = process.env.ASANA_ACCESS_TOKEN;
+    if (!adminToken) {
+      return res.status(500).json({ error: 'Admin token not configured' });
+    }
+    const asana = new AsanaService(adminToken);
 
     // Get first workspace
     const workspaces = await asana.getWorkspaces();
@@ -297,7 +302,12 @@ router.get('/dashboard/media-sales', requireAuth, async (req, res) => {
 // Optimized endpoint for Corporate Sales Dashboard
 router.get('/dashboard/corporate-sales', requireAuth, async (req, res) => {
   try {
-    const asana = new AsanaService(req.session.asana!.accessToken);
+    // Use admin token to ensure all users see the same data
+    const adminToken = process.env.ASANA_ACCESS_TOKEN;
+    if (!adminToken) {
+      return res.status(500).json({ error: 'Admin token not configured' });
+    }
+    const asana = new AsanaService(adminToken);
 
     // Get first workspace
     const workspaces = await asana.getWorkspaces();
@@ -350,7 +360,12 @@ router.get('/dashboard/corporate-sales', requireAuth, async (req, res) => {
 // Optimized endpoint for Media Delivery Dashboard
 router.get('/dashboard/media-delivery', requireAuth, async (req, res) => {
   try {
-    const asana = new AsanaService(req.session.asana!.accessToken);
+    // Use admin token to ensure all users see the same data
+    const adminToken = process.env.ASANA_ACCESS_TOKEN;
+    if (!adminToken) {
+      return res.status(500).json({ error: 'Admin token not configured' });
+    }
+    const asana = new AsanaService(adminToken);
 
     // Get first workspace
     const workspaces = await asana.getWorkspaces();
@@ -426,7 +441,12 @@ router.get('/dashboard/media-delivery', requireAuth, async (req, res) => {
 // Optimized endpoint for Corporate Delivery Dashboard
 router.get('/dashboard/corporate-delivery', requireAuth, async (req, res) => {
   try {
-    const asana = new AsanaService(req.session.asana!.accessToken);
+    // Use admin token to ensure all users see the same data
+    const adminToken = process.env.ASANA_ACCESS_TOKEN;
+    if (!adminToken) {
+      return res.status(500).json({ error: 'Admin token not configured' });
+    }
+    const asana = new AsanaService(adminToken);
 
     // Get first workspace
     const workspaces = await asana.getWorkspaces();
