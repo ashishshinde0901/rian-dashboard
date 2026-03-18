@@ -61,10 +61,6 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         aVal = a.name?.toLowerCase() || '';
         bVal = b.name?.toLowerCase() || '';
         break;
-      case 'due_on':
-        aVal = a.due_on ? new Date(a.due_on).getTime() : 0;
-        bVal = b.due_on ? new Date(b.due_on).getTime() : 0;
-        break;
       case 'committed_delivery_date':
         aVal = a.committed_delivery_date ? new Date(a.committed_delivery_date).getTime() : 0;
         bVal = b.committed_delivery_date ? new Date(b.committed_delivery_date).getTime() : 0;
@@ -168,17 +164,6 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
               </th>
               <th
                 className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('due_on')}
-              >
-                <div className="flex items-center gap-1">
-                  Due Date
-                  {sortConfig?.key === 'due_on' && (
-                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </div>
-              </th>
-              <th
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('committed_delivery_date')}
               >
                 <div className="flex items-center gap-1">
@@ -213,11 +198,6 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 {/* Project Name */}
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
                   {task.name}
-                </td>
-
-                {/* Due Date (from Asana, read-only) */}
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {formatDate(task.due_on)}
                 </td>
 
                 {/* Committed Delivery Date - Editable (Admin only) */}
