@@ -63,12 +63,15 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to save');
+      }
 
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving metric:', error);
-      alert('Failed to save. Please try again.');
+      alert(`Failed to save: ${error.message}`);
     } finally {
       setSaving(prev => {
         const newSet = new Set(prev);
