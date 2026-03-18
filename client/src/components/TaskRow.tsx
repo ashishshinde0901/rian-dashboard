@@ -112,6 +112,20 @@ const TaskRow = ({ task }: Props) => {
       </td>
 
       <td className="px-4 py-3">
+        {task.closing_probability && task.closing_probability.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {task.closing_probability.map((prob, idx) => (
+              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                {prob}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-gray-400 italic text-sm">-</span>
+        )}
+      </td>
+
+      <td className="px-4 py-3">
         {task.description ? (
           <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line line-clamp-3">
             {task.description}

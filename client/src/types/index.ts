@@ -30,6 +30,7 @@ export interface SalesTask {
   task_status?: string;
   deal_value?: string;
   expected_start_date?: string;
+  closing_probability?: string[];
 }
 
 export interface DashboardResponse {

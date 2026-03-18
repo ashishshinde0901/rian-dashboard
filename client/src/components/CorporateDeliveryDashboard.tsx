@@ -151,21 +151,6 @@ const CorporateDeliveryDashboard = () => {
       <DashboardNav />
 
       <main className="w-[90%] mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        {deliveryTasks && (
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <StatCard label="Total Deliveries" value={deliveryTasks.tasks.length} />
-            <StatCard label="Completed" value={deliveryTasks.tasks.filter((t: any) => t.completed).length} />
-            <StatCard label="In Progress" value={deliveryTasks.tasks.filter((t: any) => !t.completed).length} />
-            <StatCard label="Overdue" value={
-              deliveryTasks.tasks.filter((t: any) => {
-                if (t.completed || !t.due_on) return false;
-                return new Date(t.due_on) < new Date();
-              }).length
-            } />
-          </div>
-        )}
-
         {loading && <LoadingSpinner />}
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-lg">{error}</div>
@@ -176,12 +161,5 @@ const CorporateDeliveryDashboard = () => {
     </div>
   );
 };
-
-const StatCard = ({ label, value }: { label: string; value: number }) => (
-  <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-    <p className="text-sm text-gray-500">{label}</p>
-    <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-  </div>
-);
 
 export default CorporateDeliveryDashboard;

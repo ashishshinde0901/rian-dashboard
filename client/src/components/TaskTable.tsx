@@ -7,19 +7,20 @@ interface Props {
 }
 
 const TaskTable = ({ tasks }: Props) => {
-  const [sortField, setSortField] = useState<'updated_date' | 'name' | 'deal_value' | 'expected_start_date'>('updated_date');
+  const [sortField, setSortField] = useState<'updated_date' | 'name' | 'deal_value' | 'expected_start_date' | 'closing_probability'>('updated_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Column widths (percentages)
   const [colWidths, setColWidths] = useState({
-    task: 20,
+    task: 18,
     status: 10,
     dealValue: 10,
-    startDate: 12,
-    description: 15,
-    comments: 33,
+    startDate: 10,
+    closingProb: 12,
+    description: 13,
+    comments: 27,
   });
 
   const tableRef = useRef<HTMLTableElement>(null);
@@ -102,6 +103,10 @@ const TaskTable = ({ tasks }: Props) => {
         const aDate = a.expected_start_date || '';
         const bDate = b.expected_start_date || '';
         cmp = aDate.localeCompare(bDate);
+      } else if (sortField === 'closing_probability') {
+        const aProb = (a.closing_probability || []).join(', ');
+        const bProb = (b.closing_probability || []).join(', ');
+        cmp = aProb.localeCompare(bProb);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -186,6 +191,17 @@ const TaskTable = ({ tasks }: Props) => {
               />
             </th>
             <th
+              className="px-4 py-3 cursor-pointer hover:text-gray-900 relative"
+              style={{ width: `${colWidths.closingProb}%` }}
+              onClick={() => handleSort('closing_probability')}
+            >
+              Closing Probability <SortIcon field="closing_probability" />
+              <div
+                className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-indigo-400 bg-indigo-200 transition-colors"
+                onMouseDown={(e) => handleMouseDown('closingProb', e)}
+              />
+            </th>
+            <th
               className="px-4 py-3 relative"
               style={{ width: `${colWidths.description}%` }}
             >
@@ -209,7 +225,7 @@ const TaskTable = ({ tasks }: Props) => {
           ))}
           {filtered.length === 0 && (
             <tr>
-              <td colSpan={6} className="text-center py-12 text-gray-400">
+              <td colSpan={7} className="text-center py-12 text-gray-400">
                 No tasks found matching your criteria.
               </td>
             </tr>
