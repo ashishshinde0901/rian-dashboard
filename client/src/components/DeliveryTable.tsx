@@ -10,6 +10,7 @@ interface DeliveryTask {
   planned_margin: number | null;
   actual_margin: number | null;
   cost: number | null;
+  price: number | null;
   updateComments: Array<{
     text: string;
     created_at: string;
@@ -74,6 +75,10 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         aVal = a.cost || 0;
         bVal = b.cost || 0;
         break;
+      case 'price':
+        aVal = a.price || 0;
+        bVal = b.price || 0;
+        break;
       default:
         return 0;
     }
@@ -101,6 +106,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
         planned_margin: task?.planned_margin,
         actual_margin: task?.actual_margin,
         cost: task?.cost,
+        price: task?.price,
         [field]: value || null,
       };
 
@@ -195,6 +201,17 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
               </th>
               <th
                 className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('price')}
+              >
+                <div className="flex items-center gap-1">
+                  Price {isAdmin && <span className="text-blue-600">*</span>}
+                  {sortConfig?.key === 'price' && (
+                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </div>
+              </th>
+              <th
+                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('planned_margin')}
               >
                 <div className="flex items-center gap-1">
@@ -280,6 +297,33 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                       className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
                     >
                       {task.cost ? `₹${task.cost.toLocaleString()}` : '-'}
+                    </div>
+                  )}
+                </td>
+
+                {/* Price - Editable (Admin only) */}
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                  {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      defaultValue={task.price || ''}
+                      autoFocus
+                      className="border border-indigo-500 rounded px-2 py-1 text-sm w-24"
+                      onBlur={(e) => saveMetric(task.gid, task.name, 'price', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveMetric(task.gid, task.name, 'price', e.currentTarget.value);
+                        }
+                        if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : (
+                    <div
+                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'price' })}
+                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
+                    >
+                      {task.price ? `₹${task.price.toLocaleString()}` : '-'}
                     </div>
                   )}
                 </td>

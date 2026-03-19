@@ -419,6 +419,7 @@ router.get('/dashboard/media-delivery', requireAuth, async (req, res) => {
         planned_margin: metric?.planned_margin || null,
         actual_margin: metric?.actual_margin || null,
         cost: metric?.cost || null,
+        price: metric?.price || null,
         updateComments: task.comments
           .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
           .map((c: any) => ({
@@ -500,6 +501,7 @@ router.get('/dashboard/corporate-delivery', requireAuth, async (req, res) => {
         planned_margin: metric?.planned_margin || null,
         actual_margin: metric?.actual_margin || null,
         cost: metric?.cost || null,
+        price: metric?.price || null,
         updateComments: task.comments
           .filter((c: any) => c.text?.trim().toLowerCase().startsWith('update:'))
           .map((c: any) => ({

@@ -52,6 +52,8 @@ export const initializeDatabase = async (): Promise<void> => {
         planned_margin DECIMAL(10, 2),
         actual_margin DECIMAL(10, 2),
         cost DECIMAL(12, 2),
+        price DECIMAL(12, 2),
+        visible_to_roles TEXT[], -- Array of roles that can see this metric
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -73,6 +75,32 @@ export const initializeDatabase = async (): Promise<void> => {
           WHERE table_name='delivery_metrics' AND column_name='cost'
         ) THEN
           ALTER TABLE delivery_metrics ADD COLUMN cost DECIMAL(12, 2);
+        END IF;
+      END $$;
+    `);
+
+    // Add price column if it doesn't exist (migration for existing databases)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='delivery_metrics' AND column_name='price'
+        ) THEN
+          ALTER TABLE delivery_metrics ADD COLUMN price DECIMAL(12, 2);
+        END IF;
+      END $$;
+    `);
+
+    // Add visible_to_roles column if it doesn't exist (for role-based access)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='delivery_metrics' AND column_name='visible_to_roles'
+        ) THEN
+          ALTER TABLE delivery_metrics ADD COLUMN visible_to_roles TEXT[];
         END IF;
       END $$;
     `);

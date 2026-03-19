@@ -234,6 +234,7 @@ const TaskTable = ({ tasks }: Props) => {
         </tbody>
       </table>
     </div>
+    </div>
   );
 };
 

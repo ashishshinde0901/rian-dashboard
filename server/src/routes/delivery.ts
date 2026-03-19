@@ -48,6 +48,7 @@ router.get('/dashboard', async (req, res) => {
         planned_margin: metric?.planned_margin || null,
         actual_margin: metric?.actual_margin || null,
         cost: metric?.cost || null,
+        price: metric?.price || null,
         // Extract only "Update:" comments for display
         updateComments: task.comments
           .filter((c) => c.text.trim().toLowerCase().startsWith('update:'))
@@ -77,7 +78,7 @@ router.post('/metrics', async (req, res) => {
   console.log('Request body:', req.body);
 
   try {
-    const { asana_task_gid, project_name, committed_delivery_date, planned_margin, actual_margin, cost } =
+    const { asana_task_gid, project_name, committed_delivery_date, planned_margin, actual_margin, cost, price } =
       req.body;
 
     if (!asana_task_gid) {
@@ -94,6 +95,7 @@ router.post('/metrics', async (req, res) => {
       planned_margin: planned_margin ? parseFloat(planned_margin) : null,
       actual_margin: actual_margin ? parseFloat(actual_margin) : null,
       cost: cost ? parseFloat(cost) : null,
+      price: price ? parseFloat(price) : null,
     });
 
     console.log('✅ Metric saved successfully:', metric);
