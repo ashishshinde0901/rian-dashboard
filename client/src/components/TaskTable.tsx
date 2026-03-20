@@ -238,6 +238,30 @@ const TaskTable = ({ tasks }: Props) => {
 
     {/* Mobile Card View - shown on mobile only */}
     <div className="md:hidden">
+      {/* Mobile Sorting Dropdown */}
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <label className="block text-xs font-medium text-gray-700 mb-2">Sort by:</label>
+        <div className="flex gap-2">
+          <select
+            value={sortField}
+            onChange={(e) => handleSort(e.target.value as typeof sortField)}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="updated_date">Last Updated</option>
+            <option value="name">Task Name</option>
+            <option value="deal_value">Deal Value</option>
+            <option value="expected_start_date">Expected Start Date</option>
+            <option value="closing_probability">Closing Probability</option>
+          </select>
+          <button
+            onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
+          >
+            {sortDir === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
+      </div>
+
       {filtered.map((task) => (
         <div key={task.gid} className="border-b border-gray-200 p-4 space-y-3">
           {/* Task Name with Completion Indicator */}

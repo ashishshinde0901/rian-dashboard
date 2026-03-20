@@ -376,6 +376,37 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
 
       {/* Mobile Card View - shown on mobile only */}
       <div className="md:hidden">
+        {/* Mobile Sorting Dropdown */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <label className="block text-xs font-medium text-gray-700 mb-2">Sort by:</label>
+          <div className="flex gap-2">
+            <select
+              value={sortConfig?.key || 'name'}
+              onChange={(e) => handleSort(e.target.value)}
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="name">Project Name</option>
+              <option value="committed_delivery_date">Committed Date</option>
+              <option value="cost">Cost</option>
+              {isAdmin && <option value="price">Price</option>}
+              {isAdmin && <option value="planned_margin">Margin</option>}
+            </select>
+            <button
+              onClick={() => {
+                if (sortConfig) {
+                  setSortConfig({
+                    ...sortConfig,
+                    direction: sortConfig.direction === 'asc' ? 'desc' : 'asc'
+                  });
+                }
+              }}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              {sortConfig?.direction === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+        </div>
+
         {sortedTasks.map((task) => {
           const calculatedMargin = calculateGrossMargin(task.cost, task.price);
           return (
