@@ -30,15 +30,14 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // Check if user is admin (has access to edit database fields)
-  // Using super admin emails: nikhil.naik@rian.io, ashish.shinde@rian.io, anand@rian.io, pmo@rian.io
-  const ADMIN_EMAILS = [
+  // Check if user is super admin (has access to see and edit sensitive fields like price/margin)
+  // This list must match SUPER_ADMIN_EMAILS in Railway environment variable
+  const SUPER_ADMIN_EMAILS = [
     'nikhil.naik@rian.io',
-    'ashish.shinde@rian.io',
     'anand@rian.io',
     'pmo@rian.io'
   ];
-  const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail.toLowerCase().trim()) : false;
+  const isAdmin = userEmail ? SUPER_ADMIN_EMAILS.includes(userEmail.toLowerCase().trim()) : false;
 
   // Sorting function
   const handleSort = (key: string) => {
