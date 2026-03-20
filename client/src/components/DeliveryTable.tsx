@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AsanaUser } from '../types';
 
 interface DeliveryTask {
   gid: string;
@@ -21,23 +22,17 @@ interface DeliveryTask {
 interface DeliveryTableProps {
   tasks: DeliveryTask[];
   onUpdate: () => void;
-  userEmail?: string; // For admin check
+  user?: AsanaUser | null;
 }
 
-const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
+const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
   const [editingCell, setEditingCell] = useState<{ taskGid: string; field: string } | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // Check if user is super admin (has access to see and edit sensitive fields like price/margin)
-  // This list must match SUPER_ADMIN_EMAILS in Railway environment variable
-  const SUPER_ADMIN_EMAILS = [
-    'nikhil.naik@rian.io',
-    'anand@rian.io',
-    'pmo@rian.io'
-  ];
-  const isAdmin = userEmail ? SUPER_ADMIN_EMAILS.includes(userEmail.toLowerCase().trim()) : false;
+  // Check if user is super admin (based on role from backend using SUPER_ADMIN_EMAILS env var)
+  const isAdmin = user?.role === 'super_admin';
 
   // Sorting function
   const handleSort = (key: string) => {

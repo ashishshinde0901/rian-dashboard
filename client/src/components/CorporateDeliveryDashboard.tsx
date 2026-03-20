@@ -55,7 +55,7 @@ const CorporateDeliveryDashboard = () => {
           <div className="bg-red-50 text-red-700 p-3 sm:p-4 rounded-lg text-sm sm:text-base">{error}</div>
         )}
 
-        {deliveryTasks && <DeliveryTable tasks={deliveryTasks.tasks} onUpdate={fetchTasks} userEmail={user?.email} />}
+        {deliveryTasks && <DeliveryTable tasks={deliveryTasks.tasks} onUpdate={fetchTasks} user={user} />}
       </main>
     </div>
   );
