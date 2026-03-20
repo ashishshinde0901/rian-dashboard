@@ -157,6 +157,12 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
     });
   };
 
+  // Calculate gross margin: ((Price - Cost) / Price) * 100
+  const calculateGrossMargin = (cost: number | null, price: number | null): number | null => {
+    if (!cost || !price || price === 0) return null;
+    return ((price - cost) / price) * 100;
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
@@ -199,28 +205,32 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   )}
                 </div>
               </th>
-              <th
-                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('price')}
-              >
-                <div className="flex items-center gap-1">
-                  Price {isAdmin && <span className="text-blue-600">*</span>}
-                  {sortConfig?.key === 'price' && (
-                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </div>
-              </th>
-              <th
-                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('planned_margin')}
-              >
-                <div className="flex items-center gap-1">
-                  Margin {isAdmin && <span className="text-blue-600">*</span>}
-                  {sortConfig?.key === 'planned_margin' && (
-                    <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                  )}
-                </div>
-              </th>
+              {isAdmin && (
+                <th
+                  className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('price')}
+                >
+                  <div className="flex items-center gap-1">
+                    Price <span className="text-blue-600">*</span>
+                    {sortConfig?.key === 'price' && (
+                      <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
+              )}
+              {isAdmin && (
+                <th
+                  className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  onClick={() => handleSort('planned_margin')}
+                >
+                  <div className="flex items-center gap-1">
+                    Margin (Auto) <span className="text-blue-600">*</span>
+                    {sortConfig?.key === 'planned_margin' && (
+                      <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </th>
+              )}
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Comments (Update:)
               </th>
@@ -301,59 +311,48 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   )}
                 </td>
 
-                {/* Price - Editable (Admin only) */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
-                  {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
-                    <input
-                      type="number"
-                      step="0.01"
-                      defaultValue={task.price || ''}
-                      autoFocus
-                      className="border border-indigo-500 rounded px-2 py-1 text-sm w-24"
-                      onBlur={(e) => saveMetric(task.gid, task.name, 'price', e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          saveMetric(task.gid, task.name, 'price', e.currentTarget.value);
-                        }
-                        if (e.key === 'Escape') setEditingCell(null);
-                      }}
-                    />
-                  ) : (
-                    <div
-                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'price' })}
-                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
-                    >
-                      {task.price ? `₹${task.price.toLocaleString()}` : '-'}
-                    </div>
-                  )}
-                </td>
+                {/* Price - Visible only to Admins */}
+                {isAdmin && (
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                    {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        defaultValue={task.price || ''}
+                        autoFocus
+                        className="border border-indigo-500 rounded px-2 py-1 text-sm w-24"
+                        onBlur={(e) => saveMetric(task.gid, task.name, 'price', e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            saveMetric(task.gid, task.name, 'price', e.currentTarget.value);
+                          }
+                          if (e.key === 'Escape') setEditingCell(null);
+                        }}
+                      />
+                    ) : (
+                      <div
+                        onClick={() => setEditingCell({ taskGid: task.gid, field: 'price' })}
+                        className="px-2 py-1 rounded cursor-pointer hover:bg-gray-100"
+                      >
+                        {task.price ? `₹${task.price.toLocaleString()}` : '-'}
+                      </div>
+                    )}
+                  </td>
+                )}
 
-                {/* Margin - Editable (Admin only) */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
-                  {editingCell?.taskGid === task.gid && editingCell?.field === 'planned_margin' ? (
-                    <input
-                      type="number"
-                      step="0.01"
-                      defaultValue={task.planned_margin || ''}
-                      autoFocus
-                      className="border border-indigo-500 rounded px-2 py-1 text-sm w-24"
-                      onBlur={(e) => saveMetric(task.gid, task.name, 'planned_margin', e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          saveMetric(task.gid, task.name, 'planned_margin', e.currentTarget.value);
-                        }
-                        if (e.key === 'Escape') setEditingCell(null);
-                      }}
-                    />
-                  ) : (
-                    <div
-                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'planned_margin' })}
-                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
-                    >
-                      {task.planned_margin ? `${task.planned_margin}%` : '-'}
-                    </div>
-                  )}
-                </td>
+                {/* Margin - Auto-calculated, visible only to Admins */}
+                {isAdmin && (
+                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                    {(() => {
+                      const calculatedMargin = calculateGrossMargin(task.cost, task.price);
+                      return (
+                        <div className="px-2 py-1 rounded bg-gray-50">
+                          {calculatedMargin !== null ? `${calculatedMargin.toFixed(2)}%` : '-'}
+                        </div>
+                      );
+                    })()}
+                  </td>
+                )}
 
                 {/* Comments */}
                 <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
