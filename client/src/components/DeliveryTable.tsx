@@ -164,12 +164,13 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[600px]">
+      {/* Desktop Table View - hidden on mobile */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th
-                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
               >
                 <div className="flex items-center gap-1">
@@ -180,7 +181,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 </div>
               </th>
               <th
-                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('committed_delivery_date')}
               >
                 <div className="flex items-center gap-1">
@@ -190,11 +191,11 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   )}
                 </div>
               </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Status
               </th>
               <th
-                className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('cost')}
               >
                 <div className="flex items-center gap-1">
@@ -206,7 +207,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
               </th>
               {isAdmin && (
                 <th
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('price')}
                 >
                   <div className="flex items-center gap-1">
@@ -219,7 +220,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
               )}
               {isAdmin && (
                 <th
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('planned_margin')}
                 >
                   <div className="flex items-center gap-1">
@@ -230,7 +231,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                   </div>
                 </th>
               )}
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Comments (Update:)
               </th>
             </tr>
@@ -239,12 +240,12 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
             {sortedTasks.map((task) => (
               <tr key={task.gid} className="hover:bg-gray-50">
                 {/* Project Name */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">
+                <td className="px-4 py-3 text-sm font-medium text-gray-900">
                   {task.name}
                 </td>
 
                 {/* Committed Delivery Date - Editable (Admin only) */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                <td className="px-4 py-3 text-sm">
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'committed_delivery_date' ? (
                     <input
                       type="date"
@@ -271,20 +272,12 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 </td>
 
                 {/* Task Status */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    task.completed
-                      ? 'bg-green-100 text-green-800'
-                      : task.task_status?.toLowerCase().includes('progress')
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {task.completed ? 'Completed' : task.task_status || 'No Status'}
-                  </span>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {task.completed ? 'Completed' : task.task_status || 'No Status'}
                 </td>
 
                 {/* Cost - Editable (Admin only) */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                <td className="px-4 py-3 text-sm">
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'cost' ? (
                     <input
                       type="number"
@@ -312,7 +305,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
 
                 {/* Price - Visible only to Admins */}
                 {isAdmin && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                  <td className="px-4 py-3 text-sm">
                     {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
                       <input
                         type="number"
@@ -341,7 +334,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
 
                 {/* Margin - Auto-calculated, visible only to Admins */}
                 {isAdmin && (
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                  <td className="px-4 py-3 text-sm">
                     {(() => {
                       const calculatedMargin = calculateGrossMargin(task.cost, task.price);
                       return (
@@ -354,7 +347,7 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
                 )}
 
                 {/* Comments */}
-                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
+                <td className="px-4 py-3 text-sm">
                   {task.updateComments.length > 0 ? (
                     <div>
                       <button
@@ -385,6 +378,151 @@ const DeliveryTable = ({ tasks, onUpdate, userEmail }: DeliveryTableProps) => {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Card View - shown on mobile only */}
+      <div className="md:hidden">
+        {sortedTasks.map((task) => {
+          const calculatedMargin = calculateGrossMargin(task.cost, task.price);
+          return (
+            <div key={task.gid} className="border-b border-gray-200 p-4 space-y-3">
+              {/* Project Name */}
+              <div>
+                <h3 className="font-semibold text-gray-900 text-sm">{task.name}</h3>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Status:</span>
+                <span className="text-xs text-gray-700 font-medium">
+                  {task.completed ? 'Completed' : task.task_status || 'No Status'}
+                </span>
+              </div>
+
+              {/* Committed Date */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Committed Date:</span>
+                {editingCell?.taskGid === task.gid && editingCell?.field === 'committed_delivery_date' ? (
+                  <input
+                    type="date"
+                    defaultValue={task.committed_delivery_date || ''}
+                    autoFocus
+                    className="border border-indigo-500 rounded px-2 py-1 text-xs"
+                    onBlur={(e) => saveMetric(task.gid, task.name, 'committed_delivery_date', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        saveMetric(task.gid, task.name, 'committed_delivery_date', e.currentTarget.value);
+                      }
+                      if (e.key === 'Escape') setEditingCell(null);
+                    }}
+                  />
+                ) : (
+                  <span
+                    onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
+                    className={`text-xs font-medium ${isAdmin ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
+                  >
+                    {formatDate(task.committed_delivery_date)}
+                  </span>
+                )}
+              </div>
+
+              {/* Cost */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Cost:</span>
+                {editingCell?.taskGid === task.gid && editingCell?.field === 'cost' ? (
+                  <input
+                    type="number"
+                    step="0.01"
+                    defaultValue={task.cost || ''}
+                    autoFocus
+                    className="border border-indigo-500 rounded px-2 py-1 text-xs w-24"
+                    onBlur={(e) => saveMetric(task.gid, task.name, 'cost', e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        saveMetric(task.gid, task.name, 'cost', e.currentTarget.value);
+                      }
+                      if (e.key === 'Escape') setEditingCell(null);
+                    }}
+                  />
+                ) : (
+                  <span
+                    onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'cost' })}
+                    className={`text-xs font-medium ${isAdmin ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
+                  >
+                    {task.cost ? `₹${task.cost.toLocaleString()}` : '-'}
+                  </span>
+                )}
+              </div>
+
+              {/* Price - Admin Only */}
+              {isAdmin && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Price:</span>
+                  {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      defaultValue={task.price || ''}
+                      autoFocus
+                      className="border border-indigo-500 rounded px-2 py-1 text-xs w-24"
+                      onBlur={(e) => saveMetric(task.gid, task.name, 'price', e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveMetric(task.gid, task.name, 'price', e.currentTarget.value);
+                        }
+                        if (e.key === 'Escape') setEditingCell(null);
+                      }}
+                    />
+                  ) : (
+                    <span
+                      onClick={() => setEditingCell({ taskGid: task.gid, field: 'price' })}
+                      className="text-xs font-medium text-indigo-600 cursor-pointer"
+                    >
+                      {task.price ? `₹${task.price.toLocaleString()}` : '-'}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Margin - Admin Only */}
+              {isAdmin && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Margin (Auto):</span>
+                  <span className="text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded">
+                    {calculatedMargin !== null ? `${calculatedMargin.toFixed(2)}%` : '-'}
+                  </span>
+                </div>
+              )}
+
+              {/* Comments */}
+              {task.updateComments.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => toggleComments(task.gid)}
+                    className="text-indigo-600 hover:text-indigo-800 text-xs font-medium"
+                  >
+                    {expandedComments.has(task.gid) ? 'Hide Comments' : 'Show Comments'} ({task.updateComments.length})
+                  </button>
+                  {expandedComments.has(task.gid) && (
+                    <div className="mt-2 space-y-2">
+                      {task.updateComments.slice(0, 3).map((comment, idx) => (
+                        <div key={idx} className="text-xs bg-gray-50 p-2 rounded border border-gray-200">
+                          <p className="text-gray-700">{comment.text}</p>
+                          <p className="text-gray-400 mt-1">
+                            {comment.author} · {formatDate(comment.created_at)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {saving.has(task.gid) && <span className="text-xs text-gray-400">Saving...</span>}
+            </div>
+          );
+        })}
+      </div>
+
       {tasks.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No delivery tasks found

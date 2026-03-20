@@ -1,13 +1,11 @@
 import CommentsCell from './CommentsCell';
 import { SalesTask } from '../types';
-import { getStatusColors } from '../utils/statusColors';
 
 interface Props {
   task: SalesTask;
 }
 
 const TaskRow = ({ task }: Props) => {
-  const statusColors = getStatusColors(task.task_status);
 
   // Determine row background color based on Task Status field
   const getRowBackgroundColor = (taskStatus?: string): string => {
@@ -87,7 +85,7 @@ const TaskRow = ({ task }: Props) => {
 
       <td className="px-4 py-3">
         {task.task_status ? (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusColors.bg} ${statusColors.text} ${statusColors.border}`}>
+          <span className="text-sm text-gray-700">
             {task.task_status}
           </span>
         ) : (

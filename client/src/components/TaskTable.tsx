@@ -144,7 +144,8 @@ const TaskTable = ({ tasks }: Props) => {
         />
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Desktop Table View - hidden on mobile */}
+      <div className="hidden md:block overflow-x-auto">
         <table ref={tableRef} className="w-full min-w-[800px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs sm:text-sm text-gray-600">
@@ -233,6 +234,91 @@ const TaskTable = ({ tasks }: Props) => {
           )}
         </tbody>
       </table>
+    </div>
+
+    {/* Mobile Card View - shown on mobile only */}
+    <div className="md:hidden">
+      {filtered.map((task) => (
+        <div key={task.gid} className="border-b border-gray-200 p-4 space-y-3">
+          {/* Task Name with Completion Indicator */}
+          <div className="flex items-start gap-2">
+            <span className={`mt-0.5 text-lg ${task.completed ? 'text-green-500' : 'text-gray-300'}`}>
+              {task.completed ? '✅' : '⬜'}
+            </span>
+            <div className="flex-1">
+              <a
+                href={task.permalink_url || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-gray-900 hover:text-indigo-600 text-sm"
+              >
+                {task.name}
+              </a>
+            </div>
+          </div>
+
+          {/* Task Status */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">Status:</span>
+            <span className="text-xs text-gray-700 font-medium">
+              {task.task_status || 'No status'}
+            </span>
+          </div>
+
+          {/* Deal Value */}
+          {task.deal_value && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Deal Value:</span>
+              <span className="text-xs font-medium text-gray-700">₹{task.deal_value}</span>
+            </div>
+          )}
+
+          {/* Expected Start Date */}
+          {task.expected_start_date && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Expected Start:</span>
+              <span className="text-xs font-medium text-gray-700">{task.expected_start_date}</span>
+            </div>
+          )}
+
+          {/* Closing Probability */}
+          {task.closing_probability && task.closing_probability.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Closing Probability:</span>
+              <div className="flex flex-wrap gap-1">
+                {task.closing_probability.map((prob, idx) => (
+                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    {prob}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {task.description && (
+            <div>
+              <span className="text-xs text-gray-500 block mb-1">Description:</span>
+              <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line line-clamp-3">
+                {task.description}
+              </p>
+            </div>
+          )}
+
+          {/* Comments Count */}
+          {task.total_comments > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Comments:</span>
+              <span className="text-xs font-medium text-indigo-600">{task.total_comments} comment{task.total_comments !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
+      ))}
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-gray-400">
+          No tasks found matching your criteria.
+        </div>
+      )}
     </div>
     </div>
   );
