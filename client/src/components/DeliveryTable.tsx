@@ -31,8 +31,15 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // Check if user is super admin (based on role from backend using SUPER_ADMIN_EMAILS env var)
+  // Check user permissions based on role
   const isAdmin = user?.role === 'super_admin';
+  const isDeliveryHead = user?.role === 'delivery_head';
+  const isSalesHead = user?.role === 'sales_head';
+
+  // Determine which fields the user can edit
+  const canEditCost = isAdmin || isDeliveryHead;
+  const canEditPrice = isAdmin || isSalesHead;
+  const canEditCommittedDate = isAdmin || isDeliveryHead || isSalesHead;
 
   // Sorting function
   const handleSort = (key: string) => {
@@ -84,8 +91,17 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
   });
 
   const saveMetric = async (taskGid: string, projectName: string, field: string, value: any) => {
-    if (!isAdmin) {
-      alert('Only admins can edit this field');
+    // Check field-level permissions
+    if (field === 'cost' && !canEditCost) {
+      alert('You do not have permission to edit cost. Only delivery heads and admins can edit this field.');
+      return;
+    }
+    if (field === 'price' && !canEditPrice) {
+      alert('You do not have permission to edit price. Only sales heads and admins can edit this field.');
+      return;
+    }
+    if (field === 'committed_delivery_date' && !canEditCommittedDate) {
+      alert('You do not have permission to edit committed date.');
       return;
     }
 
@@ -180,7 +196,7 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                 onClick={() => handleSort('committed_delivery_date')}
               >
                 <div className="flex items-center gap-1">
-                  Committed Date {isAdmin && <span className="text-blue-600">*</span>}
+                  Committed Date {canEditCommittedDate && <span className="text-blue-600">*</span>}
                   {sortConfig?.key === 'committed_delivery_date' && (
                     <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                   )}
@@ -194,19 +210,19 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                 onClick={() => handleSort('cost')}
               >
                 <div className="flex items-center gap-1">
-                  Cost {isAdmin && <span className="text-blue-600">*</span>}
+                  Cost {canEditCost && <span className="text-blue-600">*</span>}
                   {sortConfig?.key === 'cost' && (
                     <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </div>
               </th>
-              {isAdmin && (
+              {(isAdmin || isSalesHead) && (
                 <th
                   className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('price')}
                 >
                   <div className="flex items-center gap-1">
-                    Price <span className="text-blue-600">*</span>
+                    Price {canEditPrice && <span className="text-blue-600">*</span>}
                     {sortConfig?.key === 'price' && (
                       <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                     )}
@@ -257,8 +273,8 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                     />
                   ) : (
                     <div
-                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
-                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
+                      onClick={() => canEditCommittedDate && setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
+                      className={`px-2 py-1 rounded ${canEditCommittedDate ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
                     >
                       {formatDate(task.committed_delivery_date)}
                       {saving.has(task.gid) && <span className="ml-2 text-xs text-gray-400">Saving...</span>}
@@ -290,16 +306,16 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                     />
                   ) : (
                     <div
-                      onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'cost' })}
-                      className={`px-2 py-1 rounded ${isAdmin ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
+                      onClick={() => canEditCost && setEditingCell({ taskGid: task.gid, field: 'cost' })}
+                      className={`px-2 py-1 rounded ${canEditCost ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
                     >
                       {task.cost ? `₹${task.cost.toLocaleString()}` : '-'}
                     </div>
                   )}
                 </td>
 
-                {/* Price - Visible only to Admins */}
-                {isAdmin && (
+                {/* Price - Visible to Admins and Sales Heads */}
+                {(isAdmin || isSalesHead) && (
                   <td className="px-4 py-3 text-sm">
                     {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
                       <input
@@ -318,8 +334,8 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                       />
                     ) : (
                       <div
-                        onClick={() => setEditingCell({ taskGid: task.gid, field: 'price' })}
-                        className="px-2 py-1 rounded cursor-pointer hover:bg-gray-100"
+                        onClick={() => canEditPrice && setEditingCell({ taskGid: task.gid, field: 'price' })}
+                        className={`px-2 py-1 rounded ${canEditPrice ? 'cursor-pointer hover:bg-gray-100' : 'cursor-not-allowed'}`}
                       >
                         {task.price ? `₹${task.price.toLocaleString()}` : '-'}
                       </div>
@@ -388,7 +404,7 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
               <option value="name">Project Name</option>
               <option value="committed_delivery_date">Committed Date</option>
               <option value="cost">Cost</option>
-              {isAdmin && <option value="price">Price</option>}
+              {(isAdmin || isSalesHead) && <option value="price">Price</option>}
               {isAdmin && <option value="planned_margin">Margin</option>}
             </select>
             <button
@@ -443,8 +459,8 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                   />
                 ) : (
                   <span
-                    onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
-                    className={`text-xs font-medium ${isAdmin ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
+                    onClick={() => canEditCommittedDate && setEditingCell({ taskGid: task.gid, field: 'committed_delivery_date' })}
+                    className={`text-xs font-medium ${canEditCommittedDate ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
                   >
                     {formatDate(task.committed_delivery_date)}
                   </span>
@@ -471,16 +487,16 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                   />
                 ) : (
                   <span
-                    onClick={() => isAdmin && setEditingCell({ taskGid: task.gid, field: 'cost' })}
-                    className={`text-xs font-medium ${isAdmin ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
+                    onClick={() => canEditCost && setEditingCell({ taskGid: task.gid, field: 'cost' })}
+                    className={`text-xs font-medium ${canEditCost ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
                   >
                     {task.cost ? `₹${task.cost.toLocaleString()}` : '-'}
                   </span>
                 )}
               </div>
 
-              {/* Price - Admin Only */}
-              {isAdmin && (
+              {/* Price - Admin and Sales Head */}
+              {(isAdmin || isSalesHead) && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">Price:</span>
                   {editingCell?.taskGid === task.gid && editingCell?.field === 'price' ? (
@@ -500,8 +516,8 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
                     />
                   ) : (
                     <span
-                      onClick={() => setEditingCell({ taskGid: task.gid, field: 'price' })}
-                      className="text-xs font-medium text-indigo-600 cursor-pointer"
+                      onClick={() => canEditPrice && setEditingCell({ taskGid: task.gid, field: 'price' })}
+                      className={`text-xs font-medium ${canEditPrice ? 'text-indigo-600 cursor-pointer' : 'text-gray-700'}`}
                     >
                       {task.price ? `₹${task.price.toLocaleString()}` : '-'}
                     </span>
@@ -554,9 +570,13 @@ const DeliveryTable = ({ tasks, onUpdate, user }: DeliveryTableProps) => {
           No delivery tasks found
         </div>
       )}
-      {isAdmin && (
+      {(isAdmin || isDeliveryHead || isSalesHead) && (
         <div className="px-4 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-700">
-          <span className="text-blue-600">*</span> Admin access: You can edit these fields
+          <span className="text-blue-600">*</span> {
+            isAdmin ? 'Admin access: You can edit all fields' :
+            isDeliveryHead ? 'Delivery Head: You can edit Cost and Committed Date' :
+            isSalesHead ? 'Sales Head: You can edit Price and Committed Date' : ''
+          }
         </div>
       )}
     </div>

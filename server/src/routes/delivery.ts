@@ -1,6 +1,7 @@
 import express from 'express';
 import { AsanaService } from '../services/asana.js';
 import { DeliveryMetricsService } from '../services/deliveryMetrics.js';
+import { requireAuth, validateFieldPermissions } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -72,8 +73,9 @@ router.get('/dashboard', async (req, res) => {
 /**
  * POST /api/delivery/metrics
  * Create or update delivery metrics for a task
+ * Requires authentication and field-level permissions
  */
-router.post('/metrics', async (req, res) => {
+router.post('/metrics', requireAuth, validateFieldPermissions, async (req, res) => {
   console.log('📝 POST /api/delivery/metrics - Request received');
   console.log('Request body:', req.body);
 
@@ -129,11 +131,27 @@ router.get('/metrics/:taskGid', async (req, res) => {
 
 /**
  * DELETE /api/delivery/metrics/:taskGid
- * Delete delivery metrics for a task
+ * Delete delivery metrics for a task (super admin only)
  */
-router.delete('/metrics/:taskGid', async (req, res) => {
+router.delete('/metrics/:taskGid', requireAuth, async (req, res) => {
   try {
     const { taskGid } = req.params;
+
+    // Only super admins can delete metrics
+    const userEmail = req.session.asana?.user?.email;
+    if (!userEmail) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { getUserRole } = await import('../config.js');
+    const role = getUserRole(userEmail);
+
+    if (role !== 'super_admin') {
+      return res.status(403).json({
+        error: 'Only super admins can delete delivery metrics',
+        role: role,
+      });
+    }
 
     const deleted = await DeliveryMetricsService.deleteMetric(taskGid);
 

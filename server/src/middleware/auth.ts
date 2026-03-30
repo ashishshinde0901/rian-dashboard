@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
-import { config } from '../config.js';
+import { config, getUserRole } from '../config.js';
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.asana?.accessToken) {
@@ -27,6 +27,60 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     } catch (error) {
       return res.status(401).json({ error: 'Token refresh failed. Re-login required.' });
     }
+  }
+
+  next();
+}
+
+/**
+ * Middleware to validate field-level permissions for delivery metrics
+ * - Super admins can edit all fields
+ * - Delivery heads can edit: cost, committed_delivery_date
+ * - Sales heads can edit: price, committed_delivery_date
+ * - Other users cannot edit any fields
+ */
+export function validateFieldPermissions(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.asana?.user?.email) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const userEmail = req.session.asana.user.email;
+  const role = getUserRole(userEmail);
+  const requestBody = req.body;
+
+  // Super admins can edit everything
+  if (role === 'super_admin') {
+    return next();
+  }
+
+  // Check which fields are being edited
+  const editableFields: string[] = [];
+
+  if (role === 'delivery_head') {
+    editableFields.push('cost', 'committed_delivery_date', 'asana_task_gid', 'project_name');
+  } else if (role === 'sales_head') {
+    editableFields.push('price', 'committed_delivery_date', 'asana_task_gid', 'project_name');
+  } else {
+    // Regular users cannot edit any fields
+    return res.status(403).json({
+      error: 'You do not have permission to edit delivery metrics',
+      role: role,
+    });
+  }
+
+  // Check if user is trying to edit forbidden fields
+  const requestedFields = Object.keys(requestBody).filter(
+    (key) => requestBody[key] !== undefined && requestBody[key] !== null
+  );
+
+  const forbiddenFields = requestedFields.filter((field) => !editableFields.includes(field));
+
+  if (forbiddenFields.length > 0) {
+    return res.status(403).json({
+      error: `You do not have permission to edit these fields: ${forbiddenFields.join(', ')}`,
+      role: role,
+      allowedFields: editableFields.filter(f => f !== 'asana_task_gid' && f !== 'project_name'),
+    });
   }
 
   next();
