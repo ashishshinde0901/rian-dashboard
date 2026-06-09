@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
 import emailRoutes from './routes/email.js';
 import deliveryRoutes from './routes/delivery.js';
+import mediaRianRoutes from './routes/mediaRian.js';
 import { SchedulerService } from './services/scheduler.js';
 import { initializeDatabase } from './db/database.js';
 
@@ -43,6 +44,7 @@ app.use('/auth', authRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/media-rian', mediaRianRoutes);
 
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok' }));

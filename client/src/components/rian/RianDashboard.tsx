@@ -1,0 +1,232 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Initiative, InitiativeType, FlagColor } from '../../types/rian';
+import { TABS, FLAG, avColor, initials, firstName } from '../../utils/rian';
+import { Icon } from './ui/Icons';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+export default function RianDashboard() {
+  const [data, setData] = useState<Initiative[]>([]);
+  const [tab, setTab] = useState<InitiativeType>(TABS[0].key);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statFilter, setStatFilter] = useState<'all' | FlagColor>('all');
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Fetch initiatives on mount
+  useEffect(() => {
+    fetch(`${API_URL}/api/media-rian/initiatives`, { credentials: 'include' })
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to fetch initiatives');
+        return r.json();
+      })
+      .then(d => {
+        setData(d.initiatives || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching initiatives:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  // Derived data
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    TABS.forEach(t => {
+      c[t.key] = data.filter(i => i.type === t.key).length;
+    });
+    return c;
+  }, [data]);
+
+  const blockedTotal = useMemo(() => data.filter(i => i.overall === 'red').length, [data]);
+
+  const tabList = useMemo(() => data.filter(i => i.type === tab), [data, tab]);
+
+  const visible = useMemo(() => {
+    let list = tabList;
+    if (statFilter !== 'all') list = list.filter(i => i.overall === statFilter);
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(i =>
+        (i.name + ' ' + i.desc + ' ' + i.owner + ' ' + i.client).toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [tabList, statFilter, query]);
+
+  // Handlers
+  const switchTab = (k: InitiativeType) => {
+    setTab(k);
+    setSelectedId(null);
+    setStatFilter('all');
+    setQuery('');
+  };
+
+  const selectRow = (id: string) => {
+    setSelectedId(prev => (prev === id ? null : id));
+  };
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="content">
+          <div className="content-inner" style={{ paddingTop: 100, textAlign: 'center' }}>
+            <div style={{ fontSize: 18, color: 'var(--ink-2)' }}>Loading Media.Rian initiatives...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      {/* NavBar */}
+      <nav className="nav">
+        <div className="brand">
+          <div className="brand-mark">
+            <i></i><i></i><i></i>
+          </div>
+          <div className="brand-name">RIAN <em>Ops</em></div>
+        </div>
+        <div className="brand-sep"></div>
+
+        <div className="tabs">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              className={`tab${tab === t.key ? ' active' : ''}`}
+              onClick={() => switchTab(t.key)}
+            >
+              {t.short}
+              <span className="tab-count">{counts[t.key] || 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="nav-right">
+          {blockedTotal > 0 && (
+            <button
+              className="blocked-alert"
+              onClick={() => setStatFilter('red')}
+              title="Jump to blocked initiatives"
+            >
+              <span className="pulse"></span>
+              <b>{blockedTotal}</b> blocked
+            </button>
+          )}
+
+          <div className="conn demo">
+            <span className="dot"></span>
+            Demo · Real Data
+          </div>
+
+          <button className="avatar-btn" title="You">A</button>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="main-row">
+        <div className="content">
+          <div className="content-inner">
+            <div className="page-head">
+              <h1 className="page-title">Initiative <em>tracker</em></h1>
+            </div>
+
+            {/* Simple Table */}
+            <div className="table-card">
+              <div className="table-toolbar">
+                <h2>Initiatives</h2>
+
+                <div className="tfilter">
+                  {(['red', 'amber', 'green'] as FlagColor[]).map(f => {
+                    const count = tabList.filter(i => i.overall === f).length;
+                    return (
+                      <button
+                        key={f}
+                        className={`tchip${statFilter === f ? ' active' : ''}`}
+                        onClick={() => setStatFilter(statFilter === f ? 'all' : f)}
+                      >
+                        <span className="d" style={{ background: FLAG[f].color }}></span>
+                        <span className="ct">{count}</span>
+                      </button>
+                    );
+                  })}
+
+                  <div className="tfilter-sep"></div>
+
+                  <button
+                    className={`tchip all${statFilter === 'all' ? ' active' : ''}`}
+                    onClick={() => setStatFilter('all')}
+                  >
+                    All <span className="ct">{tabList.length}</span>
+                  </button>
+                </div>
+
+                <div className="search">
+                  <Icon name="search" size={15} style={{ color: 'var(--ink-3)' }} />
+                  <input
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Filter initiatives…"
+                  />
+                </div>
+              </div>
+
+              {/* Rows */}
+              <div>
+                {visible.length === 0 ? (
+                  <div className="empty">No initiatives match this view.</div>
+                ) : (
+                  visible.map(initiative => (
+                    <div
+                      key={initiative.id}
+                      className={`row${selectedId === initiative.id ? ' sel' : ''}`}
+                      onClick={() => selectRow(initiative.id)}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '4px 1fr auto auto auto',
+                        gap: 14,
+                        padding: '12px 18px 12px 0',
+                        borderBottom: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div
+                        className="flagbar"
+                        style={{ background: FLAG[initiative.overall].color }}
+                      ></div>
+
+                      <div style={{ minWidth: 0 }}>
+                        <div className="it-name">{initiative.name}</div>
+                        <div className="it-desc">{initiative.desc}</div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div
+                          className="asg-av"
+                          style={{ background: avColor(initiative.owner) }}
+                        >
+                          {initials(initiative.owner)}
+                        </div>
+                        <span className="l1" style={{ fontSize: 13 }}>{firstName(initiative.owner)}</span>
+                      </div>
+
+                      <span className={`prio ${initiative.priority}`}>{initiative.priority}</span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-3)' }}>
+                        <Icon name="comment" size={14} />
+                        {initiative.comments?.length || 0}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

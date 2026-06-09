@@ -8,6 +8,7 @@ yarn.lock
 .env
 .env.local
 .env.production
+SECRETS.md
 
 # Build outputs
 dist/
