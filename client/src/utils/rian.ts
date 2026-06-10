@@ -98,24 +98,25 @@ export interface ColumnMeta {
 }
 
 export const COL_META: Record<string, ColumnMeta> = {
-  init: { label: 'Initiative', w: 'minmax(0,1.9fr)' },
-  conversion: { label: 'Conversion', w: 'minmax(96px,1fr)' },
-  delivery: { label: 'Delivery', w: 'minmax(96px,1fr)' },
-  region: { label: 'Region', w: 'minmax(72px,0.74fr)' },
-  client: { label: 'Client', w: 'minmax(80px,0.84fr)' },
-  assignee: { label: 'Assignee', w: 'minmax(96px,0.95fr)' },
-  committed: { label: 'Committed', w: 'minmax(74px,0.7fr)' },
-  deadline: { label: 'Deadline', w: 'minmax(74px,0.7fr)' },
-  prio: { label: 'Prio', w: '44px', center: true },
-  comments: { label: 'Comments', w: '48px', center: true },
+  init: { label: 'Initiative', w: 'minmax(0,1.2fr)' },
+  conversion: { label: 'Conversion', w: 'minmax(70px,0.6fr)' },
+  delivery: { label: 'Delivery', w: 'minmax(70px,0.6fr)' },
+  region: { label: 'Region', w: 'minmax(60px,0.5fr)' },
+  client: { label: 'Client', w: 'minmax(70px,0.6fr)' },
+  assignee: { label: 'Assignee', w: '40px', center: true },
+  committed: { label: 'Committed', w: 'minmax(60px,0.5fr)' },
+  deadline: { label: 'Deadline', w: 'minmax(60px,0.5fr)' },
+  prio: { label: 'Prio', w: '36px', center: true },
+  aiSummary: { label: 'AI Summary', w: 'minmax(0,1.5fr)' },
+  commentsList: { label: 'Comments', w: 'minmax(0,1.5fr)' },
 };
 
 // Get column layout for tab type
 export function layoutFor(type: InitiativeType): string[] {
-  if (type === 'Technology & Product') return ['init', 'assignee', 'deadline', 'prio', 'comments'];
-  if (type === 'Media Sales & Delivery') return ['init', 'committed', 'delivery', 'client', 'assignee', 'prio', 'comments'];
-  if (type === 'India BD') return ['init', 'conversion', 'client', 'assignee', 'prio', 'comments'];
-  return ['init', 'conversion', 'region', 'client', 'assignee', 'prio', 'comments']; // International BD
+  if (type === 'Technology & Product') return ['init', 'assignee', 'deadline', 'prio', 'aiSummary', 'commentsList'];
+  if (type === 'Media Sales & Delivery') return ['init', 'committed', 'delivery', 'client', 'assignee', 'prio', 'aiSummary', 'commentsList'];
+  if (type === 'India BD') return ['init', 'conversion', 'client', 'assignee', 'prio', 'aiSummary', 'commentsList'];
+  return ['init', 'conversion', 'region', 'client', 'assignee', 'prio', 'aiSummary', 'commentsList']; // International BD
 }
 
 // Generate grid template from layout

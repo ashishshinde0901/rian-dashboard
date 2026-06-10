@@ -15,7 +15,6 @@ export default function RianDashboard() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showMasterAI, setShowMasterAI] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showAllComments, setShowAllComments] = useState<Set<string>>(new Set());
 
   // Fetch initiatives on mount
@@ -74,18 +73,6 @@ export default function RianDashboard() {
 
   const selectRow = (id: string) => {
     setSelectedId(prev => (prev === id ? null : id));
-  };
-
-  const toggleRowExpanded = (id: string) => {
-    setExpandedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
   };
 
   const toggleShowAllComments = (id: string) => {
@@ -234,8 +221,8 @@ export default function RianDashboard() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: gridTemplate,
-                  gap: 8,
-                  padding: '10px 12px 10px 0',
+                  gap: 4,
+                  padding: '10px 0',
                   borderBottom: '2px solid var(--border)',
                   fontSize: 12,
                   fontWeight: 600,
@@ -264,7 +251,6 @@ export default function RianDashboard() {
                 ) : (
                   visible.map(initiative => {
                     const deliveryInfo = DELIVERY_STATUS[initiative.deliveryStatus] || DELIVERY_STATUS['Not Started'];
-                    const isExpanded = expandedRows.has(initiative.id);
                     const showAll = showAllComments.has(initiative.id);
                     const commentsToShow = showAll ? initiative.comments : initiative.comments.slice(0, 3);
 
@@ -277,9 +263,9 @@ export default function RianDashboard() {
                           style={{
                             display: 'grid',
                             gridTemplateColumns: gridTemplate,
-                            gap: 8,
-                            padding: '10px 12px 10px 0',
-                            borderBottom: isExpanded ? 'none' : '1px solid var(--border)',
+                            gap: 4,
+                            padding: '10px 0',
+                            borderBottom: '1px solid var(--border)',
                             cursor: 'pointer',
                             alignItems: 'start',
                           }}
@@ -406,20 +392,106 @@ export default function RianDashboard() {
                             );
                           }
 
-                          if (col === 'comments') {
+                          if (col === 'aiSummary') {
                             return (
-                              <div
-                                key={idx}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, color: 'var(--ink-3)', cursor: 'pointer' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleRowExpanded(initiative.id);
-                                }}
-                                title="View AI summary and comments"
-                              >
-                                <Icon name={isExpanded ? "chevron-up" : "chevron-down"} size={14} />
-                                <Icon name="comment" size={14} />
-                                {initiative.comments?.length || 0}
+                              <div key={idx} style={{ minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    lineHeight: '1.4',
+                                    color: 'var(--ink-2)',
+                                    maxHeight: '4.2em',
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                  }}
+                                >
+                                  {initiative.desc || 'No summary available'}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (col === 'commentsList') {
+                            return (
+                              <div key={idx} style={{ minWidth: 0 }}>
+                                {commentsToShow.length === 0 ? (
+                                  <div style={{ fontSize: 10, color: 'var(--ink-3)', fontStyle: 'italic' }}>
+                                    No comments
+                                  </div>
+                                ) : (
+                                  <div>
+                                    {commentsToShow.map((comment, cidx) => (
+                                      <div
+                                        key={cidx}
+                                        style={{
+                                          padding: '3px 0',
+                                          borderBottom: cidx < commentsToShow.length - 1 ? '1px solid var(--border)' : 'none',
+                                        }}
+                                      >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                          <div
+                                            style={{
+                                              width: 14,
+                                              height: 14,
+                                              borderRadius: '50%',
+                                              background: avColor(comment.author),
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              fontSize: 7,
+                                              fontWeight: 600,
+                                              color: '#fff',
+                                            }}
+                                          >
+                                            {initials(comment.author)}
+                                          </div>
+                                          <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-1)' }}>
+                                            {firstName(comment.author)}
+                                          </span>
+                                          <span style={{ fontSize: 8, color: 'var(--ink-3)' }}>
+                                            {comment.ago}
+                                          </span>
+                                        </div>
+                                        <div
+                                          style={{
+                                            fontSize: 9,
+                                            color: 'var(--ink-2)',
+                                            lineHeight: '1.3',
+                                            maxHeight: '2.6em',
+                                            overflow: 'hidden',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                          }}
+                                        >
+                                          {comment.text}
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {initiative.comments.length > 3 && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleShowAllComments(initiative.id);
+                                        }}
+                                        style={{
+                                          marginTop: 4,
+                                          padding: '2px 6px',
+                                          background: 'none',
+                                          border: '1px solid var(--border)',
+                                          borderRadius: 'var(--r-sm)',
+                                          fontSize: 8,
+                                          color: 'var(--ink-2)',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        {showAll ? 'Show less' : `+${initiative.comments.length - 3} more`}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           }
@@ -427,172 +499,6 @@ export default function RianDashboard() {
                           return null;
                         })}
                         </div>
-
-                        {/* Expandable Detail Section */}
-                        {isExpanded && (
-                          <div style={{
-                            padding: '16px',
-                            background: 'var(--bg)',
-                            borderBottom: '1px solid var(--border)',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: 16,
-                          }}>
-                            {/* Left: AI Summary */}
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                                <Icon name="spark" size={14} style={{ color: 'var(--rust)' }} />
-                                <h4 style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>AI Summary</h4>
-                              </div>
-                              <div style={{
-                                fontSize: 11,
-                                lineHeight: '1.5',
-                                color: 'var(--ink-2)',
-                                maxHeight: '4.5em',
-                                overflow: 'hidden',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: 'vertical',
-                              }}>
-                                {initiative.desc || 'No summary available. This initiative needs more details.'}
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setShowMasterAI(true);
-                                }}
-                                style={{
-                                  marginTop: 8,
-                                  padding: '4px 10px',
-                                  background: 'var(--rust)',
-                                  color: '#fff',
-                                  border: 'none',
-                                  borderRadius: 'var(--r-sm)',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Ask AI about this
-                              </button>
-                            </div>
-
-                            {/* Right: Comments */}
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <Icon name="comment" size={14} style={{ color: 'var(--ink-2)' }} />
-                                  <h4 style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>Comments ({initiative.comments.length})</h4>
-                                </div>
-                                {initiative.comments.length > 3 && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleShowAllComments(initiative.id);
-                                    }}
-                                    style={{
-                                      padding: '2px 8px',
-                                      background: 'none',
-                                      border: '1px solid var(--border)',
-                                      borderRadius: 'var(--r-sm)',
-                                      fontSize: 10,
-                                      color: 'var(--ink-2)',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {showAll ? 'Show less' : `Show all (${initiative.comments.length})`}
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Comments List */}
-                              <div style={{
-                                maxHeight: showAll ? '300px' : 'auto',
-                                overflow: showAll ? 'auto' : 'visible',
-                                marginBottom: 8,
-                              }}>
-                                {commentsToShow.length === 0 ? (
-                                  <div style={{ fontSize: 11, color: 'var(--ink-3)', fontStyle: 'italic' }}>
-                                    No comments yet
-                                  </div>
-                                ) : (
-                                  commentsToShow.map((comment, idx) => (
-                                    <div
-                                      key={idx}
-                                      style={{
-                                        padding: '6px 0',
-                                        borderBottom: idx < commentsToShow.length - 1 ? '1px solid var(--border)' : 'none',
-                                      }}
-                                    >
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                                        <div
-                                          style={{
-                                            width: 16,
-                                            height: 16,
-                                            borderRadius: '50%',
-                                            background: avColor(comment.author),
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 8,
-                                            fontWeight: 600,
-                                            color: '#fff',
-                                          }}
-                                        >
-                                          {initials(comment.author)}
-                                        </div>
-                                        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-1)' }}>
-                                          {firstName(comment.author)}
-                                        </span>
-                                        <span style={{ fontSize: 9, color: 'var(--ink-3)' }}>
-                                          {comment.ago}
-                                        </span>
-                                      </div>
-                                      <div style={{
-                                        fontSize: 10,
-                                        color: 'var(--ink-2)',
-                                        lineHeight: '1.4',
-                                      }}>
-                                        {comment.text}
-                                      </div>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-
-                              {/* Comment Input */}
-                              <div style={{ display: 'flex', gap: 6 }}>
-                                <input
-                                  type="text"
-                                  placeholder="Add a comment..."
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={{
-                                    flex: 1,
-                                    padding: '4px 8px',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 'var(--r-sm)',
-                                    fontSize: 10,
-                                  }}
-                                />
-                                <button
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={{
-                                    padding: '4px 10px',
-                                    background: 'var(--rust)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 'var(--r-sm)',
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Send
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })
