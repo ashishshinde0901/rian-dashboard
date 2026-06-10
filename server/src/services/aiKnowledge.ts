@@ -206,54 +206,68 @@ ${this.knowledgeBase
     chartData?: any;
   }> {
     console.log(`\n🤖 Processing AI query: "${query}"`);
+    console.log(`📊 Knowledge base contains: ${this.knowledgeBase.length} tasks`);
 
     // Auto-sync if knowledge base is empty or stale (>5 minutes)
     if (!this.lastSync || (Date.now() - this.lastSync.getTime()) > 5 * 60 * 1000) {
-      console.log('Knowledge base is stale, syncing...');
+      console.log('⚠️  Knowledge base is stale, syncing...');
       const token = process.env.ASANA_ACCESS_TOKEN;
       if (token) {
         await this.syncKnowledgeBase(token);
       }
+    } else {
+      console.log(`✅ Knowledge base is fresh (last sync: ${this.lastSync.toISOString()})`);
     }
 
     const knowledgeSummary = this.generateKnowledgeSummary();
+    console.log(`📝 Generated knowledge summary: ${knowledgeSummary.length} characters`);
+
+    // Use ALL tasks from knowledge base
+    const tasksToSend = this.knowledgeBase;
+    console.log(`📦 Sending ${tasksToSend.length} tasks to AI`);
 
     // Prepare detailed context for AI
     const systemPrompt = `You are an AI assistant with deep knowledge of two Asana projects: Media.Rian and Media Squad.
 
-You have access to complete task data including:
-- All tasks, assignees, priorities, statuses, flags
-- All comments and subtasks
-- Custom fields: Client, Region, Initiative Type, Delivery Status, etc.
-- Historical activity and updates
-
 ${knowledgeSummary}
 
 Your job is to:
-1. Answer questions about tasks, people, workload, status
+1. Answer questions about tasks, people, workload, status with specific details
 2. Provide insights and trends
-3. Generate data for charts/infographics when requested
-4. Be specific with task names, people, and numbers
+3. Be conversational and helpful
+4. Use markdown formatting for better readability
 
-When providing chart data, format as JSON with clear labels and values.`;
+Always provide specific task names, assignees, and numbers when available.`;
 
-    const userPrompt = `${query}
+    const userPrompt = `User question: ${query}
 
-Relevant tasks context:
-${JSON.stringify(this.knowledgeBase, null, 2)}`;
+Here are all the tasks in our knowledge base:
+${JSON.stringify(tasksToSend, null, 2)}
+
+Please provide a detailed, helpful answer based on this data.`;
+
+    console.log(`📤 System prompt length: ${systemPrompt.length} characters`);
+    console.log(`📤 User prompt length: ${userPrompt.length} characters`);
+    console.log(`📤 Total prompt size: ${systemPrompt.length + userPrompt.length} characters`);
 
     try {
+      console.log('🌐 Making API call to OpenRouter...');
+      const requestPayload = {
+        model: 'deepseek/deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: 2000,
+        temperature: 0.7,
+      };
+
+      console.log(`📨 Request model: ${requestPayload.model}`);
+      console.log(`📨 Request max_tokens: ${requestPayload.max_tokens}`);
+
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
-        {
-          model: 'deepseek/deepseek-chat', // Very cost-effective, excellent quality
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          max_tokens: 2000,
-          temperature: 0.7,
-        },
+        requestPayload,
         {
           headers: {
             'Authorization': `Bearer ${this.openRouterKey}`,
@@ -262,7 +276,12 @@ ${JSON.stringify(this.knowledgeBase, null, 2)}`;
         }
       );
 
+      console.log('✅ OpenRouter API response received');
+      console.log(`📊 Response status: ${response.status}`);
+      console.log(`📊 Response data:`, JSON.stringify(response.data, null, 2));
+
       const answer = response.data.choices[0].message.content;
+      console.log(`📝 AI answer length: ${answer.length} characters`);
 
       // Extract chart data if AI provided it
       const chartDataMatch = answer.match(/```json\n([\s\S]*?)\n```/);
@@ -270,12 +289,13 @@ ${JSON.stringify(this.knowledgeBase, null, 2)}`;
       if (chartDataMatch) {
         try {
           chartData = JSON.parse(chartDataMatch[1]);
+          console.log('📈 Chart data extracted successfully');
         } catch (e) {
-          console.error('Failed to parse chart data:', e);
+          console.error('❌ Failed to parse chart data:', e);
         }
       }
 
-      console.log('✅ AI query answered\n');
+      console.log('✅ AI query answered successfully\n');
 
       return {
         answer,
@@ -283,9 +303,17 @@ ${JSON.stringify(this.knowledgeBase, null, 2)}`;
         insights: this.generateInsights(),
       };
     } catch (error: any) {
-      console.error('AI query error:', error.response?.data || error.message);
+      console.error('❌ AI query error occurred');
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
 
       // Fallback to pattern-based response
+      console.log('⚠️  Using fallback pattern-based response');
       return {
         answer: this.fallbackAnswer(query),
         insights: this.generateInsights(),
