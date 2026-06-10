@@ -3,6 +3,7 @@ import { Initiative, InitiativeType, FlagColor } from '../../types/rian';
 import { TABS, FLAG, avColor, initials, firstName, layoutFor, gridTemplateFor, fmtDate, DELIVERY_STATUS, COL_META } from '../../utils/rian';
 import { Icon } from './ui/Icons';
 import Drawer from './Drawer';
+import MasterAIChat from './MasterAIChat';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -13,6 +14,7 @@ export default function RianDashboard() {
   const [statFilter, setStatFilter] = useState<'all' | FlagColor>('all');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showMasterAI, setShowMasterAI] = useState(false);
 
   // Fetch initiatives on mount
   useEffect(() => {
@@ -110,6 +112,29 @@ export default function RianDashboard() {
         </div>
 
         <div className="nav-right">
+          {/* Master AI Chat Button */}
+          <button
+            onClick={() => setShowMasterAI(true)}
+            style={{
+              padding: '8px 16px',
+              background: 'linear-gradient(135deg, var(--rust) 0%, var(--rust-deep) 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--r-md)',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              boxShadow: '0 2px 8px rgba(189, 74, 43, 0.3)',
+            }}
+            title="Open Master AI Assistant"
+          >
+            <Icon name="spark" size={16} />
+            Master AI
+          </button>
+
           {blockedTotal > 0 && (
             <button
               className="blocked-alert"
@@ -351,6 +376,9 @@ export default function RianDashboard() {
 
       {/* Drawer */}
       <Drawer initiativeId={selectedId} onClose={() => setSelectedId(null)} />
+
+      {/* Master AI Chat */}
+      {showMasterAI && <MasterAIChat onClose={() => setShowMasterAI(false)} />}
     </div>
   );
 }
