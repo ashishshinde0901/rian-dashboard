@@ -2,7 +2,7 @@ import { AsanaService } from './asana.js';
 import axios from 'axios';
 
 const MEDIA_RIAN_PROJECT_GID = '1215471459454088';
-const MEDIA_SQUAD_PROJECT_GID = process.env.MEDIA_SQUAD_PROJECT_GID || '1215471459454088';
+const MEDIA_SQUAD_PROJECT_GID = '1213024317030114';
 const WORKSPACE_GID = '1200057218350324';
 
 interface DeepTask {

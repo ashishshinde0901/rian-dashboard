@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Icon } from './ui/Icons';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -275,12 +276,49 @@ Try asking: "Who has the most tasks?" or "Show me blocked initiatives"`,
                   color: msg.role === 'user' ? '#fff' : 'var(--ink-1)',
                   fontSize: 14,
                   lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
                   wordWrap: 'break-word',
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
                 }}
               >
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <div
+                    className="markdown-content"
+                    style={{
+                      '& p': { margin: '0 0 8px 0' },
+                      '& p:last-child': { margin: 0 },
+                      '& ul, & ol': { margin: '8px 0', paddingLeft: 20 },
+                      '& li': { margin: '4px 0' },
+                      '& strong': { fontWeight: 600 },
+                      '& em': { fontStyle: 'italic' },
+                      '& code': {
+                        background: 'rgba(0, 0, 0, 0.05)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '0.9em',
+                        fontFamily: 'var(--mono)',
+                      },
+                      '& pre': {
+                        background: 'rgba(0, 0, 0, 0.05)',
+                        padding: 12,
+                        borderRadius: 'var(--r-md)',
+                        overflow: 'auto',
+                        fontSize: '0.9em',
+                      },
+                      '& pre code': {
+                        background: 'none',
+                        padding: 0,
+                      },
+                      '& h1, & h2, & h3': {
+                        margin: '12px 0 8px 0',
+                        fontWeight: 600,
+                      },
+                    } as any}
+                  >
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                )}
                 {msg.chartData && (
                   <div style={{ marginTop: 12, padding: 12, background: 'rgba(0, 0, 0, 0.05)', borderRadius: 'var(--r-md)' }}>
                     <pre style={{ fontSize: 12, margin: 0 }}>{JSON.stringify(msg.chartData, null, 2)}</pre>
