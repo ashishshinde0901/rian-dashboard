@@ -78,9 +78,10 @@ function transformTaskToInitiative(task: any): any {
 // GET /api/media-rian/initiatives - Get all initiatives from Media.Rian project
 router.get('/initiatives', async (req: Request, res: Response) => {
   try {
-    const accessToken = (req.session as any).asanaAccessToken;
+    // Use server-side ASANA_ACCESS_TOKEN for Media.Rian project
+    const accessToken = process.env.ASANA_ACCESS_TOKEN;
     if (!accessToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(500).json({ error: 'ASANA_ACCESS_TOKEN not configured on server' });
     }
 
     const asana = new AsanaService(accessToken);
@@ -137,9 +138,10 @@ router.get('/initiatives', async (req: Request, res: Response) => {
 // GET /api/media-rian/initiatives/:id - Get single initiative with comments
 router.get('/initiatives/:id', async (req: Request, res: Response) => {
   try {
-    const accessToken = (req.session as any).asanaAccessToken;
+    // Use server-side ASANA_ACCESS_TOKEN for Media.Rian project
+    const accessToken = process.env.ASANA_ACCESS_TOKEN;
     if (!accessToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(500).json({ error: 'ASANA_ACCESS_TOKEN not configured on server' });
     }
 
     const { id } = req.params;
@@ -197,9 +199,10 @@ router.get('/initiatives/:id', async (req: Request, res: Response) => {
 // POST /api/media-rian/initiatives/:id/comments - Add comment to initiative
 router.post('/initiatives/:id/comments', async (req: Request, res: Response) => {
   try {
-    const accessToken = (req.session as any).asanaAccessToken;
+    // Use server-side ASANA_ACCESS_TOKEN for Media.Rian project
+    const accessToken = process.env.ASANA_ACCESS_TOKEN;
     if (!accessToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(500).json({ error: 'ASANA_ACCESS_TOKEN not configured on server' });
     }
 
     const { id } = req.params;
@@ -264,11 +267,6 @@ function getTimeAgo(date: Date): string {
 // POST /api/media-rian/chat - AI chat endpoint
 router.post('/chat', async (req: Request, res: Response) => {
   try {
-    const accessToken = (req.session as any).asanaAccessToken;
-    if (!accessToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
     const { query, initiatives } = req.body;
 
     if (!query || !initiatives) {
