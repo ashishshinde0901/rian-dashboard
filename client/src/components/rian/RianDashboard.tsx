@@ -157,8 +157,9 @@ export default function RianDashboard() {
 
       {/* Main Content */}
       <div className="main-row">
-        <div className="content">
-          <div className="content-inner">
+        <div className="content" style={{ display: 'flex', gap: 16, maxWidth: '100%', padding: '0 16px' }}>
+          {/* Left: Table */}
+          <div style={{ flex: '1 1 60%', minWidth: 0 }}>
             <div className="page-head">
               <h1 className="page-title">Initiative <em>tracker</em></h1>
             </div>
@@ -208,8 +209,8 @@ export default function RianDashboard() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: gridTemplate,
-                  gap: 14,
-                  padding: '10px 18px 10px 0',
+                  gap: 8,
+                  padding: '10px 12px 10px 0',
                   borderBottom: '2px solid var(--border)',
                   fontSize: 12,
                   fontWeight: 600,
@@ -247,11 +248,11 @@ export default function RianDashboard() {
                         style={{
                           display: 'grid',
                           gridTemplateColumns: gridTemplate,
-                          gap: 14,
-                          padding: '12px 18px 12px 0',
+                          gap: 8,
+                          padding: '10px 12px 10px 0',
                           borderBottom: '1px solid var(--border)',
                           cursor: 'pointer',
-                          alignItems: 'center',
+                          alignItems: 'start',
                         }}
                       >
                         {/* Flag bar */}
@@ -263,10 +264,33 @@ export default function RianDashboard() {
                         {/* Render columns based on layout */}
                         {layout.map((col, idx) => {
                           if (col === 'init') {
+                            const asanaUrl = initiative.permalink_url || `https://app.asana.com/0/0/${initiative.asanaGid || initiative.gid}`;
                             return (
                               <div key={idx} style={{ minWidth: 0 }}>
-                                <div className="it-name">{initiative.name}</div>
-                                <div className="it-desc">{initiative.desc}</div>
+                                <a
+                                  href={asanaUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="it-name"
+                                  style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {initiative.name}
+                                </a>
+                                <div
+                                  className="it-desc"
+                                  style={{
+                                    fontSize: 11,
+                                    lineHeight: '1.4',
+                                    maxHeight: '2.8em',
+                                    overflow: 'hidden',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                  }}
+                                >
+                                  {initiative.desc}
+                                </div>
                               </div>
                             );
                           }
@@ -317,14 +341,14 @@ export default function RianDashboard() {
 
                           if (col === 'assignee') {
                             return (
-                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div key={idx} style={{ display: 'flex', justifyContent: 'center' }}>
                                 <div
                                   className="asg-av"
                                   style={{ background: avColor(initiative.owner) }}
+                                  title={initiative.owner}
                                 >
                                   {initials(initiative.owner)}
                                 </div>
-                                <span className="l1" style={{ fontSize: 13 }}>{firstName(initiative.owner)}</span>
                               </div>
                             );
                           }
@@ -368,6 +392,144 @@ export default function RianDashboard() {
                     );
                   })
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: AI Summary & Comments */}
+          <div style={{ flex: '1 1 40%', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* AI Summary Section */}
+            <div className="table-card" style={{ padding: 16 }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="spark" size={16} style={{ color: 'var(--rust)' }} />
+                AI Summary
+              </h3>
+              <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: '1.6' }}>
+                {`${visible.length} initiatives • ${visible.filter(i => i.overall === 'red').length} blocked • ${visible.filter(i => i.overall === 'green').length} on track`}
+              </div>
+              <button
+                onClick={() => setShowMasterAI(true)}
+                style={{
+                  marginTop: 12,
+                  width: '100%',
+                  padding: '8px',
+                  background: 'var(--rust)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 'var(--r-md)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Ask AI Assistant
+              </button>
+            </div>
+
+            {/* Comments Section */}
+            <div className="table-card" style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="comment" size={16} style={{ color: 'var(--ink-2)' }} />
+                Recent Activity
+              </h3>
+
+              <div style={{ flex: 1, overflow: 'auto', marginBottom: 12 }}>
+                {data
+                  .flatMap(i => i.comments.map(c => ({ ...c, taskName: i.name, taskId: i.id })))
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .slice(0, 3)
+                  .map((comment, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '8px 0',
+                        borderBottom: idx < 2 ? '1px solid var(--border)' : 'none',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <div
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: avColor(comment.author),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 9,
+                            fontWeight: 600,
+                            color: '#fff',
+                          }}
+                        >
+                          {initials(comment.author)}
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-1)' }}>
+                          {firstName(comment.author)}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>
+                          {comment.ago}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: 'var(--ink-2)',
+                          marginBottom: 2,
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        on {comment.taskName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--ink-2)',
+                          lineHeight: '1.4',
+                          maxHeight: '2.8em',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
+                        {comment.text}
+                      </div>
+                    </div>
+                  ))}
+
+                {data.flatMap(i => i.comments).length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', padding: '20px 0' }}>
+                    No comments yet
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Add a comment..."
+                  style={{
+                    flex: 1,
+                    padding: '6px 10px',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)',
+                    fontSize: 11,
+                  }}
+                />
+                <button
+                  style={{
+                    padding: '6px 12px',
+                    background: 'var(--rust)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 'var(--r-md)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Send
+                </button>
               </div>
             </div>
           </div>
