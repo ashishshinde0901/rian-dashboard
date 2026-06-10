@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Initiative, InitiativeType, FlagColor } from '../../types/rian';
-import { TABS, FLAG, avColor, initials, firstName } from '../../utils/rian';
+import { TABS, FLAG, avColor, initials, firstName, layoutFor, gridTemplateFor, fmtDate, DELIVERY_STATUS } from '../../utils/rian';
 import { Icon } from './ui/Icons';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -54,6 +54,10 @@ export default function RianDashboard() {
     }
     return list;
   }, [tabList, statFilter, query]);
+
+  // Get column layout for current tab
+  const layout = useMemo(() => layoutFor(tab), [tab]);
+  const gridTemplate = useMemo(() => gridTemplateFor(layout), [layout]);
 
   // Handlers
   const switchTab = (k: InitiativeType) => {
@@ -178,49 +182,137 @@ export default function RianDashboard() {
                 {visible.length === 0 ? (
                   <div className="empty">No initiatives match this view.</div>
                 ) : (
-                  visible.map(initiative => (
-                    <div
-                      key={initiative.id}
-                      className={`row${selectedId === initiative.id ? ' sel' : ''}`}
-                      onClick={() => selectRow(initiative.id)}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '4px 1fr auto auto auto',
-                        gap: 14,
-                        padding: '12px 18px 12px 0',
-                        borderBottom: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        alignItems: 'center',
-                      }}
-                    >
+                  visible.map(initiative => {
+                    const deliveryInfo = DELIVERY_STATUS[initiative.deliveryStatus] || DELIVERY_STATUS['Not Started'];
+
+                    return (
                       <div
-                        className="flagbar"
-                        style={{ background: FLAG[initiative.overall].color }}
-                      ></div>
-
-                      <div style={{ minWidth: 0 }}>
-                        <div className="it-name">{initiative.name}</div>
-                        <div className="it-desc">{initiative.desc}</div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        key={initiative.id}
+                        className={`row${selectedId === initiative.id ? ' sel' : ''}`}
+                        onClick={() => selectRow(initiative.id)}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: gridTemplate,
+                          gap: 14,
+                          padding: '12px 18px 12px 0',
+                          borderBottom: '1px solid var(--border)',
+                          cursor: 'pointer',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {/* Flag bar */}
                         <div
-                          className="asg-av"
-                          style={{ background: avColor(initiative.owner) }}
-                        >
-                          {initials(initiative.owner)}
-                        </div>
-                        <span className="l1" style={{ fontSize: 13 }}>{firstName(initiative.owner)}</span>
-                      </div>
+                          className="flagbar"
+                          style={{ background: FLAG[initiative.overall].color }}
+                        ></div>
 
-                      <span className={`prio ${initiative.priority}`}>{initiative.priority}</span>
+                        {/* Render columns based on layout */}
+                        {layout.map((col, idx) => {
+                          if (col === 'init') {
+                            return (
+                              <div key={idx} style={{ minWidth: 0 }}>
+                                <div className="it-name">{initiative.name}</div>
+                                <div className="it-desc">{initiative.desc}</div>
+                              </div>
+                            );
+                          }
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--ink-3)' }}>
-                        <Icon name="comment" size={14} />
-                        {initiative.comments?.length || 0}
+                          if (col === 'conversion') {
+                            return (
+                              <div key={idx} className="l1" style={{ fontSize: 13 }}>
+                                {initiative.conv || '—'}
+                              </div>
+                            );
+                          }
+
+                          if (col === 'delivery') {
+                            return (
+                              <div key={idx}>
+                                <span
+                                  className="badge"
+                                  style={{
+                                    background: deliveryInfo.bg,
+                                    color: deliveryInfo.color,
+                                    padding: '3px 8px',
+                                    borderRadius: 'var(--r-sm)',
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {initiative.deliveryStatus}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          if (col === 'region') {
+                            return (
+                              <div key={idx} className="l1" style={{ fontSize: 13 }}>
+                                {initiative.region || '—'}
+                              </div>
+                            );
+                          }
+
+                          if (col === 'client') {
+                            return (
+                              <div key={idx} className="l1" style={{ fontSize: 13 }}>
+                                {initiative.client || '—'}
+                              </div>
+                            );
+                          }
+
+                          if (col === 'assignee') {
+                            return (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div
+                                  className="asg-av"
+                                  style={{ background: avColor(initiative.owner) }}
+                                >
+                                  {initials(initiative.owner)}
+                                </div>
+                                <span className="l1" style={{ fontSize: 13 }}>{firstName(initiative.owner)}</span>
+                              </div>
+                            );
+                          }
+
+                          if (col === 'committed') {
+                            return (
+                              <div key={idx} className="l1" style={{ fontSize: 13 }}>
+                                {fmtDate(initiative.due)}
+                              </div>
+                            );
+                          }
+
+                          if (col === 'deadline') {
+                            return (
+                              <div key={idx} className="l1" style={{ fontSize: 13 }}>
+                                {fmtDate(initiative.due)}
+                              </div>
+                            );
+                          }
+
+                          if (col === 'prio') {
+                            return (
+                              <div key={idx} style={{ textAlign: 'center' }}>
+                                <span className={`prio ${initiative.priority}`}>{initiative.priority}</span>
+                              </div>
+                            );
+                          }
+
+                          if (col === 'comments') {
+                            return (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, color: 'var(--ink-3)' }}>
+                                <Icon name="comment" size={14} />
+                                {initiative.comments?.length || 0}
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
