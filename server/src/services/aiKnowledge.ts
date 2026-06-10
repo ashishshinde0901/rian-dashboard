@@ -222,10 +222,9 @@ ${this.knowledgeBase
     const knowledgeSummary = this.generateKnowledgeSummary();
     console.log(`📝 Generated knowledge summary: ${knowledgeSummary.length} characters`);
 
-    // Filter to most relevant tasks to stay within token limits
-    // DeepSeek has 32k token limit, we need to keep prompts under ~25k tokens (~100k chars)
-    const relevantTasks = this.filterRelevantTasks(query);
-    console.log(`📦 Filtered to ${relevantTasks.length} relevant tasks (from ${this.knowledgeBase.length} total)`);
+    // Use ALL tasks - DeepSeek V4 Flash has 1M+ token context window
+    const tasksToSend = this.knowledgeBase;
+    console.log(`📦 Sending ${tasksToSend.length} tasks to AI`);
 
     // Prepare detailed context for AI
     const systemPrompt = `You are an AI assistant with deep knowledge of two Asana projects: Media.Rian and Media Squad.
@@ -242,8 +241,8 @@ Always provide specific task names, assignees, and numbers when available.`;
 
     const userPrompt = `User question: ${query}
 
-Here are the most relevant tasks for this query:
-${JSON.stringify(relevantTasks, null, 2)}
+Here are all the tasks in our knowledge base:
+${JSON.stringify(tasksToSend, null, 2)}
 
 Please provide a detailed, helpful answer based on this data.`;
 
@@ -254,7 +253,7 @@ Please provide a detailed, helpful answer based on this data.`;
     try {
       console.log('🌐 Making API call to OpenRouter...');
       const requestPayload = {
-        model: 'deepseek/deepseek-chat',
+        model: 'deepseek/deepseek-v4-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
