@@ -114,9 +114,9 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .content-inner {
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 20px 34px 60px;
+  max-width: 100%;
+  margin: 0;
+  padding: 20px 12px 60px;
 }
 
 /* keyframes */
