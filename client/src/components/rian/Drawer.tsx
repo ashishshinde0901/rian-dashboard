@@ -200,53 +200,7 @@ export default function Drawer({ initiativeId, onClose }: DrawerProps) {
               )}
             </div>
 
-            {/* Additional Details (only non-duplicate fields) */}
-            {(initiative.client || initiative.due || initiative.conv) && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 20,
-                  marginBottom: 32,
-                }}
-              >
-                {initiative.client && (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                      CLIENT
-                    </div>
-                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.client}</div>
-                  </div>
-                )}
-
-                {initiative.due && (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                      DUE DATE
-                    </div>
-                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{fmtDate(initiative.due)}</div>
-                  </div>
-                )}
-
-                {initiative.conv && (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                      CONVERSION TIME
-                    </div>
-                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.conv}</div>
-                  </div>
-                )}
-
-                {initiative.deliveryStatus && (
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                      DELIVERY STATUS
-                    </div>
-                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.deliveryStatus}</div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* No additional details needed - all info visible in main table */}
 
             {/* Comments Chat Section */}
             <div
