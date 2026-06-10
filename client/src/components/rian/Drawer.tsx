@@ -15,6 +15,8 @@ export default function Drawer({ initiativeId, onClose }: DrawerProps) {
   const [loading, setLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [loadingAI, setLoadingAI] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
 
   // Fetch initiative details when drawer opens
   useEffect(() => {
@@ -60,6 +62,39 @@ export default function Drawer({ initiativeId, onClose }: DrawerProps) {
       setAiSummary('Unable to generate summary');
     } finally {
       setLoadingAI(false);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!newComment.trim() || !initiativeId || postingComment) return;
+
+    setPostingComment(true);
+    try {
+      const response = await fetch(`${API_URL}/api/media-rian/initiatives/${initiativeId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text: newComment.trim() }),
+      });
+
+      if (!response.ok) throw new Error('Failed to post comment');
+
+      const data = await response.json();
+
+      // Add new comment to the list
+      if (initiative) {
+        setInitiative({
+          ...initiative,
+          comments: [...(initiative.comments || []), data.comment],
+        });
+      }
+
+      setNewComment('');
+    } catch (err) {
+      console.error('Error posting comment:', err);
+      alert('Failed to post comment');
+    } finally {
+      setPostingComment(false);
     }
   };
 
@@ -165,144 +200,211 @@ export default function Drawer({ initiativeId, onClose }: DrawerProps) {
               )}
             </div>
 
-            {/* Details Grid */}
+            {/* Additional Details (only non-duplicate fields) */}
+            {(initiative.client || initiative.due || initiative.conv) && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 20,
+                  marginBottom: 32,
+                }}
+              >
+                {initiative.client && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
+                      CLIENT
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.client}</div>
+                  </div>
+                )}
+
+                {initiative.due && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
+                      DUE DATE
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{fmtDate(initiative.due)}</div>
+                  </div>
+                )}
+
+                {initiative.conv && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
+                      CONVERSION TIME
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.conv}</div>
+                  </div>
+                )}
+
+                {initiative.deliveryStatus && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
+                      DELIVERY STATUS
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.deliveryStatus}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Comments Chat Section */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 20,
-                marginBottom: 32,
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-lg)',
+                display: 'flex',
+                flexDirection: 'column',
+                height: 'calc(100vh - 420px)',
+                minHeight: 300,
               }}
             >
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                  INITIATIVE TYPE
-                </div>
-                <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.type}</div>
+              {/* Chat Header */}
+              <div
+                style={{
+                  padding: '16px 20px',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <Icon name="comment" size={16} style={{ color: 'var(--ink-2)' }} />
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)', margin: 0 }}>
+                  Comments ({initiative.comments?.length || 0})
+                </h3>
               </div>
 
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                  PRIORITY
-                </div>
-                <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>
-                  {PRIORITY_LABEL[initiative.priority] || initiative.priority}
-                </div>
-              </div>
-
-              {initiative.client && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                    CLIENT
-                  </div>
-                  <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.client}</div>
-                </div>
-              )}
-
-              {initiative.region && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                    REGION
-                  </div>
-                  <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.region}</div>
-                </div>
-              )}
-
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                  OWNER
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Messages List */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: 20,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                }}
+              >
+                {!initiative.comments || initiative.comments.length === 0 ? (
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      background: avColor(initiative.owner),
+                      flex: 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: '#fff',
+                      color: 'var(--ink-3)',
+                      fontSize: 14,
                     }}
                   >
-                    {initials(initiative.owner)}
+                    No comments yet. Start the conversation!
                   </div>
-                  <span style={{ fontSize: 14, color: 'var(--ink-1)' }}>{initiative.owner}</span>
-                </div>
-              </div>
-
-              {initiative.due && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6 }}>
-                    DUE DATE
-                  </div>
-                  <div style={{ fontSize: 14, color: 'var(--ink-1)' }}>{fmtDate(initiative.due)}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Comments Section */}
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 16 }}>
-                Comments ({initiative.comments?.length || 0})
-              </h3>
-
-              {!initiative.comments || initiative.comments.length === 0 ? (
-                <div
-                  style={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--r-lg)',
-                    padding: 32,
-                    textAlign: 'center',
-                    color: 'var(--ink-3)',
-                  }}
-                >
-                  No comments yet
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {initiative.comments.map((comment: any) => (
-                    <div
-                      key={comment.gid}
-                      style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--r-lg)',
-                        padding: 16,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <div
+                ) : (
+                  initiative.comments.map((comment: any) => (
+                    <div key={comment.gid} style={{ display: 'flex', gap: 10 }}>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          background: avColor(comment.author),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#fff',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {initials(comment.author)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-1)' }}>
+                            {comment.author}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{comment.ago}</span>
+                        </div>
+                        <p
                           style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: '50%',
-                            background: avColor(comment.author),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            color: '#fff',
+                            fontSize: 14,
+                            color: 'var(--ink-2)',
+                            lineHeight: 1.5,
+                            margin: 0,
+                            wordWrap: 'break-word',
                           }}
                         >
-                          {initials(comment.author)}
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-1)' }}>
-                          {comment.author}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{comment.ago}</span>
+                          {comment.text}
+                        </p>
                       </div>
-                      <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.5, margin: 0 }}>
-                        {comment.text}
-                      </p>
                     </div>
-                  ))}
+                  ))
+                )}
+              </div>
+
+              {/* Comment Input */}
+              <div
+                style={{
+                  padding: 16,
+                  borderTop: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                }}
+              >
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                  <textarea
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handlePostComment();
+                      }
+                    }}
+                    placeholder="Write a comment... (Enter to send, Shift+Enter for new line)"
+                    disabled={postingComment}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      maxHeight: 120,
+                      padding: '10px 14px',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--r-md)',
+                      fontSize: 14,
+                      fontFamily: 'var(--sans)',
+                      resize: 'vertical',
+                      background: 'var(--surface)',
+                      color: 'var(--ink-1)',
+                    }}
+                  />
+                  <button
+                    onClick={handlePostComment}
+                    disabled={!newComment.trim() || postingComment}
+                    style={{
+                      padding: '10px 20px',
+                      background: newComment.trim() ? 'var(--rust)' : 'var(--border)',
+                      color: newComment.trim() ? '#fff' : 'var(--ink-3)',
+                      border: 'none',
+                      borderRadius: 'var(--r-md)',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: newComment.trim() ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    {postingComment ? 'Posting...' : (
+                      <>
+                        <Icon name="send" size={14} />
+                        Send
+                      </>
+                    )}
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         ) : null}
