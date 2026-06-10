@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Initiative, InitiativeType, FlagColor } from '../../types/rian';
-import { TABS, FLAG, avColor, initials, firstName, layoutFor, gridTemplateFor, fmtDate, DELIVERY_STATUS } from '../../utils/rian';
+import { TABS, FLAG, avColor, initials, firstName, layoutFor, gridTemplateFor, fmtDate, DELIVERY_STATUS, COL_META } from '../../utils/rian';
 import { Icon } from './ui/Icons';
+import Drawer from './Drawer';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -177,6 +178,34 @@ export default function RianDashboard() {
                 </div>
               </div>
 
+              {/* Column Headers */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: gridTemplate,
+                  gap: 14,
+                  padding: '10px 18px 10px 0',
+                  borderBottom: '2px solid var(--border)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--ink-3)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                <div></div> {/* Flag bar space */}
+                {layout.map((col, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      textAlign: COL_META[col].center ? 'center' : 'left',
+                    }}
+                  >
+                    {COL_META[col].label}
+                  </div>
+                ))}
+              </div>
+
               {/* Rows */}
               <div>
                 {visible.length === 0 ? (
@@ -319,6 +348,9 @@ export default function RianDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Drawer */}
+      <Drawer initiativeId={selectedId} onClose={() => setSelectedId(null)} />
     </div>
   );
 }
