@@ -98,17 +98,17 @@ export interface ColumnMeta {
 }
 
 export const COL_META: Record<string, ColumnMeta> = {
-  init: { label: 'Initiative', w: 'minmax(0,1.2fr)' },
-  conversion: { label: 'Conversion', w: 'minmax(70px,0.6fr)' },
-  delivery: { label: 'Delivery', w: 'minmax(70px,0.6fr)' },
-  region: { label: 'Region', w: 'minmax(60px,0.5fr)' },
-  client: { label: 'Client', w: 'minmax(70px,0.6fr)' },
-  assignee: { label: 'Assignee', w: '40px', center: true },
-  committed: { label: 'Committed', w: 'minmax(60px,0.5fr)' },
-  deadline: { label: 'Deadline', w: 'minmax(60px,0.5fr)' },
-  prio: { label: 'Prio', w: '36px', center: true },
-  aiSummary: { label: 'AI Summary', w: 'minmax(0,1.5fr)' },
-  commentsList: { label: 'Comments', w: 'minmax(0,1.5fr)' },
+  init: { label: 'Initiative', w: 'minmax(0,1fr)' },
+  conversion: { label: 'Conversion', w: 'minmax(60px,0.5fr)' },
+  delivery: { label: 'Delivery', w: 'minmax(60px,0.5fr)' },
+  region: { label: 'Region', w: 'minmax(50px,0.4fr)' },
+  client: { label: 'Client', w: 'minmax(60px,0.5fr)' },
+  assignee: { label: 'Assignee', w: '44px', center: true },
+  committed: { label: 'Committed', w: 'minmax(55px,0.45fr)' },
+  deadline: { label: 'Deadline', w: 'minmax(55px,0.45fr)' },
+  prio: { label: 'Prio', w: '38px', center: true },
+  aiSummary: { label: 'AI Summary', w: 'minmax(0,1.8fr)' },
+  commentsList: { label: 'Comments', w: 'minmax(0,1.8fr)' },
 };
 
 // Get column layout for tab type

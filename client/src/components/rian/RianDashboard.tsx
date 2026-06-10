@@ -252,7 +252,8 @@ export default function RianDashboard() {
                   visible.map(initiative => {
                     const deliveryInfo = DELIVERY_STATUS[initiative.deliveryStatus] || DELIVERY_STATUS['Not Started'];
                     const showAll = showAllComments.has(initiative.id);
-                    const commentsToShow = showAll ? initiative.comments : initiative.comments.slice(0, 3);
+                    const allComments = initiative.comments || [];
+                    const commentsToShow = showAll ? allComments : allComments.slice(0, 3);
 
                     return (
                       <div key={initiative.id}>
@@ -414,9 +415,10 @@ export default function RianDashboard() {
                           }
 
                           if (col === 'commentsList') {
+                            const hasComments = initiative.comments && initiative.comments.length > 0;
                             return (
                               <div key={idx} style={{ minWidth: 0 }}>
-                                {commentsToShow.length === 0 ? (
+                                {!hasComments ? (
                                   <div style={{ fontSize: 10, color: 'var(--ink-3)', fontStyle: 'italic' }}>
                                     No comments
                                   </div>
@@ -470,7 +472,7 @@ export default function RianDashboard() {
                                         </div>
                                       </div>
                                     ))}
-                                    {initiative.comments.length > 3 && (
+                                    {allComments.length > 3 && (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -487,7 +489,7 @@ export default function RianDashboard() {
                                           cursor: 'pointer',
                                         }}
                                       >
-                                        {showAll ? 'Show less' : `+${initiative.comments.length - 3} more`}
+                                        {showAll ? 'Show less' : `+${allComments.length - 3} more`}
                                       </button>
                                     )}
                                   </div>
