@@ -222,9 +222,10 @@ ${this.knowledgeBase
     const knowledgeSummary = this.generateKnowledgeSummary();
     console.log(`📝 Generated knowledge summary: ${knowledgeSummary.length} characters`);
 
-    // Use ALL tasks from knowledge base
-    const tasksToSend = this.knowledgeBase;
-    console.log(`📦 Sending ${tasksToSend.length} tasks to AI`);
+    // Filter to most relevant tasks to stay within token limits
+    // DeepSeek has 32k token limit, we need to keep prompts under ~25k tokens (~100k chars)
+    const relevantTasks = this.filterRelevantTasks(query);
+    console.log(`📦 Filtered to ${relevantTasks.length} relevant tasks (from ${this.knowledgeBase.length} total)`);
 
     // Prepare detailed context for AI
     const systemPrompt = `You are an AI assistant with deep knowledge of two Asana projects: Media.Rian and Media Squad.
@@ -241,8 +242,8 @@ Always provide specific task names, assignees, and numbers when available.`;
 
     const userPrompt = `User question: ${query}
 
-Here are all the tasks in our knowledge base:
-${JSON.stringify(tasksToSend, null, 2)}
+Here are the most relevant tasks for this query:
+${JSON.stringify(relevantTasks, null, 2)}
 
 Please provide a detailed, helpful answer based on this data.`;
 
@@ -319,6 +320,88 @@ Please provide a detailed, helpful answer based on this data.`;
         insights: this.generateInsights(),
       };
     }
+  }
+
+  /**
+   * Filter knowledge base to most relevant tasks based on query
+   * Limits to ~30 tasks max to stay within token limits
+   */
+  private filterRelevantTasks(query: string): DeepTask[] {
+    const lowerQuery = query.toLowerCase();
+    const keywords = lowerQuery.split(/\s+/);
+
+    // Score each task based on relevance
+    const scoredTasks = this.knowledgeBase.map(task => {
+      let score = 0;
+
+      // Match keywords in task name (high weight)
+      keywords.forEach(keyword => {
+        if (task.name.toLowerCase().includes(keyword)) score += 10;
+        if (task.description.toLowerCase().includes(keyword)) score += 5;
+        if (task.type.toLowerCase().includes(keyword)) score += 8;
+        if (task.client.toLowerCase().includes(keyword)) score += 6;
+      });
+
+      // Boost recent activity
+      const daysSinceModified = (Date.now() - new Date(task.modified_at).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceModified < 7) score += 5;
+      if (daysSinceModified < 3) score += 10;
+
+      // Boost priority tasks
+      if (task.priority === 'P0') score += 15;
+      if (task.priority === 'P1') score += 10;
+
+      // Boost blocked/red flag tasks
+      if (task.flag.toLowerCase().includes('red')) score += 12;
+      if (task.flag.toLowerCase().includes('block')) score += 12;
+
+      // Boost incomplete tasks
+      if (!task.completed) score += 3;
+
+      // Query-specific boosts
+      if (/(block|stuck|red|flag|issue)/i.test(lowerQuery)) {
+        if (task.flag.toLowerCase().includes('red')) score += 20;
+      }
+      if (/(sales|delivery)/i.test(lowerQuery)) {
+        if (task.type.toLowerCase().includes('sales') || task.type.toLowerCase().includes('delivery')) score += 15;
+      }
+      if (/(latest|recent|update|new)/i.test(lowerQuery)) {
+        if (daysSinceModified < 7) score += 15;
+      }
+      if (/(summary|overview|all)/i.test(lowerQuery)) {
+        // For summary queries, prioritize diverse task representation
+        score += 2;
+      }
+
+      return { task, score };
+    });
+
+    // Sort by score and take top 30
+    const topTasks = scoredTasks
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30)
+      .map(item => item.task);
+
+    // If query is very general (summary/overview), ensure diversity
+    if (/(summary|overview|all|everything)/i.test(lowerQuery)) {
+      // Mix: top priority, recent, blocked, and representative from each project
+      const priority = this.knowledgeBase
+        .filter(t => t.priority === 'P0' || t.priority === 'P1')
+        .slice(0, 10);
+      const recent = this.knowledgeBase
+        .sort((a, b) => new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime())
+        .slice(0, 10);
+      const blocked = this.knowledgeBase
+        .filter(t => t.flag.toLowerCase().includes('red'))
+        .slice(0, 5);
+
+      // Combine and dedupe
+      const combined = [...priority, ...recent, ...blocked];
+      const unique = Array.from(new Map(combined.map(t => [t.gid, t])).values());
+      return unique.slice(0, 30);
+    }
+
+    return topTasks;
   }
 
   /**
