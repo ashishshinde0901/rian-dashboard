@@ -221,7 +221,6 @@ export default function RianDashboard() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: gridTemplate,
-                  gap: 4,
                   padding: '10px 0',
                   borderBottom: '2px solid var(--border)',
                   fontSize: 12,
@@ -264,7 +263,6 @@ export default function RianDashboard() {
                           style={{
                             display: 'grid',
                             gridTemplateColumns: gridTemplate,
-                            gap: 4,
                             padding: '10px 0',
                             borderBottom: '1px solid var(--border)',
                             cursor: 'pointer',
@@ -416,11 +414,36 @@ export default function RianDashboard() {
 
                           if (col === 'commentsList') {
                             const hasComments = initiative.comments && initiative.comments.length > 0;
+                            console.log(`Task ${initiative.name}:`, {
+                              hasComments,
+                              commentsLength: initiative.comments?.length,
+                              comments: initiative.comments
+                            });
                             return (
                               <div key={idx} style={{ minWidth: 0 }}>
                                 {!hasComments ? (
-                                  <div style={{ fontSize: 10, color: 'var(--ink-3)', fontStyle: 'italic' }}>
-                                    No comments
+                                  <div>
+                                    <div style={{ fontSize: 10, color: 'var(--ink-3)', fontStyle: 'italic', marginBottom: 4 }}>
+                                      No comments
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        alert('Comment input coming soon!');
+                                      }}
+                                      style={{
+                                        padding: '2px 8px',
+                                        background: 'var(--rust)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: 'var(--r-sm)',
+                                        fontSize: 9,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      + Add comment
+                                    </button>
                                   </div>
                                 ) : (
                                   <div>
@@ -472,26 +495,45 @@ export default function RianDashboard() {
                                         </div>
                                       </div>
                                     ))}
-                                    {allComments.length > 3 && (
+                                    <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                                      {allComments.length > 3 && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleShowAllComments(initiative.id);
+                                          }}
+                                          style={{
+                                            padding: '2px 6px',
+                                            background: 'none',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--r-sm)',
+                                            fontSize: 8,
+                                            color: 'var(--ink-2)',
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          {showAll ? 'Show less' : `+${allComments.length - 3} more`}
+                                        </button>
+                                      )}
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          toggleShowAllComments(initiative.id);
+                                          alert('Comment input coming soon!');
                                         }}
                                         style={{
-                                          marginTop: 4,
                                           padding: '2px 6px',
-                                          background: 'none',
-                                          border: '1px solid var(--border)',
+                                          background: 'var(--rust)',
+                                          color: '#fff',
+                                          border: 'none',
                                           borderRadius: 'var(--r-sm)',
                                           fontSize: 8,
-                                          color: 'var(--ink-2)',
+                                          fontWeight: 600,
                                           cursor: 'pointer',
                                         }}
                                       >
-                                        {showAll ? 'Show less' : `+${allComments.length - 3} more`}
+                                        + Add
                                       </button>
-                                    )}
+                                    </div>
                                   </div>
                                 )}
                               </div>
