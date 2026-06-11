@@ -799,7 +799,30 @@ Return ALL actions as an array.`;
       const responseContent = parseResponse.data.choices[0].message.content;
       console.log('🤖 AI parsing response:', responseContent);
 
-      const parsed = JSON.parse(responseContent);
+      // Extract JSON from response - AI might include extra text
+      let jsonContent = responseContent;
+      if (!responseContent) {
+        throw new Error('AI returned empty response');
+      }
+
+      // Try to extract JSON from markdown code blocks if present
+      const jsonMatch = responseContent.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim();
+        console.log('📦 Extracted JSON from code block');
+      }
+
+      // Try to find JSON object in the response
+      const jsonObjectMatch = jsonContent.match(/\{[\s\S]*\}/);
+      if (jsonObjectMatch) {
+        jsonContent = jsonObjectMatch[0];
+      }
+
+      const parsed = JSON.parse(jsonContent);
+      if (!parsed || !parsed.actions || !Array.isArray(parsed.actions)) {
+        throw new Error('AI response missing "actions" array');
+      }
+
       console.log('📝 Parsed actions:', JSON.stringify(parsed, null, 2));
 
       // STEP 2: Execute each action
