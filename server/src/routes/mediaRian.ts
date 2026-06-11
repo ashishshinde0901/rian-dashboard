@@ -113,8 +113,36 @@ router.get('/initiatives', async (req: Request, res: Response) => {
 
     console.log(`Found ${data.data.length} tasks in Media.Rian project`);
 
-    // Transform tasks to initiatives
-    const initiatives = data.data.map(transformTaskToInitiative);
+    // Fetch comments for all tasks in parallel (with concurrency limit)
+    const CONCURRENCY = 5;
+    const initiatives = [];
+
+    for (let i = 0; i < data.data.length; i += CONCURRENCY) {
+      const batch = data.data.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (task: any) => {
+          // Fetch comments for this task
+          const comments = await asana.getTaskComments(task.gid);
+
+          // Transform comments to match Initiative format
+          const formattedComments = comments.map((comment: any) => ({
+            gid: comment.gid,
+            author: comment.created_by.name,
+            text: comment.text,
+            created_at: comment.created_at,
+            ago: getTimeAgo(new Date(comment.created_at)),
+            source: 'asana' as const,
+          }));
+
+          // Transform task to initiative
+          const initiative = transformTaskToInitiative(task);
+          initiative.comments = formattedComments;
+
+          return initiative;
+        })
+      );
+      initiatives.push(...results);
+    }
 
     // Sort by most recently updated
     initiatives.sort(
@@ -122,7 +150,7 @@ router.get('/initiatives', async (req: Request, res: Response) => {
         new Date(b.updated_date).getTime() - new Date(a.updated_date).getTime()
     );
 
-    console.log(`Transformed to ${initiatives.length} initiatives\n`);
+    console.log(`Transformed to ${initiatives.length} initiatives with comments\n`);
 
     res.json({
       initiatives,

@@ -107,7 +107,7 @@ export const COL_META: Record<string, ColumnMeta> = {
   committed: { label: 'Committed', w: 'minmax(55px,0.45fr)' },
   deadline: { label: 'Deadline', w: 'minmax(55px,0.45fr)' },
   prio: { label: 'Prio', w: '38px', center: true },
-  aiSummary: { label: 'AI Summary', w: 'minmax(0,1.8fr)' },
+  aiSummary: { label: 'Summary', w: 'minmax(0,1.8fr)' },
   commentsList: { label: 'Comments', w: 'minmax(0,1.8fr)' },
 };
 
