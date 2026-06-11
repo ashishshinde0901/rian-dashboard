@@ -122,6 +122,6 @@ export function layoutFor(type: InitiativeType): string[] {
 // Generate grid template from layout
 export function gridTemplateFor(layout: string[]): string {
   const columns = layout.map(k => COL_META[k].w);
-  // Add 4px for flagbar, then columns with 6px gaps between them
-  return `4px ${columns.join(' 6px ')}`;
+  // Add 4px for flagbar, then all columns
+  return `4px ${columns.join(' ')}`;
 }

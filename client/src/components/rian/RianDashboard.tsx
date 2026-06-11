@@ -221,6 +221,7 @@ export default function RianDashboard() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: gridTemplate,
+                  columnGap: 8,
                   padding: '10px 0',
                   borderBottom: '2px solid var(--border)',
                   fontSize: 12,
@@ -263,6 +264,7 @@ export default function RianDashboard() {
                           style={{
                             display: 'grid',
                             gridTemplateColumns: gridTemplate,
+                            columnGap: 8,
                             padding: '10px 0',
                             borderBottom: '1px solid var(--border)',
                             cursor: 'pointer',
