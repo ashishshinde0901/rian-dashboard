@@ -16,6 +16,9 @@ export default function RianDashboard() {
   const [loading, setLoading] = useState(true);
   const [showMasterAI, setShowMasterAI] = useState(false);
   const [showAllComments, setShowAllComments] = useState<Set<string>>(new Set());
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [showCommentInput, setShowCommentInput] = useState<Set<string>>(new Set());
+  const [submittingComment, setSubmittingComment] = useState<Set<string>>(new Set());
 
   // Fetch initiatives on mount
   useEffect(() => {
@@ -85,6 +88,77 @@ export default function RianDashboard() {
       }
       return newSet;
     });
+  };
+
+  const toggleCommentInput = (id: string) => {
+    setShowCommentInput(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+        // Clear input when hiding
+        setCommentInputs(prevInputs => {
+          const { [id]: _, ...rest } = prevInputs;
+          return rest;
+        });
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const submitComment = async (initiativeId: string) => {
+    const text = commentInputs[initiativeId]?.trim();
+    if (!text) return;
+
+    // Add to submitting set
+    setSubmittingComment(prev => new Set(prev).add(initiativeId));
+
+    try {
+      const response = await fetch(`${API_URL}/api/media-rian/initiatives/${initiativeId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) throw new Error('Failed to add comment');
+
+      const result = await response.json();
+
+      // Update data with new comment
+      setData(prevData =>
+        prevData.map(initiative => {
+          if (initiative.id === initiativeId) {
+            return {
+              ...initiative,
+              comments: [result.comment, ...(initiative.comments || [])],
+            };
+          }
+          return initiative;
+        })
+      );
+
+      // Clear input and hide
+      setCommentInputs(prevInputs => {
+        const { [initiativeId]: _, ...rest } = prevInputs;
+        return rest;
+      });
+      setShowCommentInput(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(initiativeId);
+        return newSet;
+      });
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+      alert('Failed to add comment. Please try again.');
+    } finally {
+      setSubmittingComment(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(initiativeId);
+        return newSet;
+      });
+    }
   };
 
   if (loading) {
@@ -416,14 +490,12 @@ export default function RianDashboard() {
 
                           if (col === 'commentsList') {
                             const hasComments = initiative.comments && initiative.comments.length > 0;
-                            console.log(`Task ${initiative.name}:`, {
-                              hasComments,
-                              commentsLength: initiative.comments?.length,
-                              comments: initiative.comments
-                            });
+                            const showingInput = showCommentInput.has(initiative.id);
+                            const isSubmitting = submittingComment.has(initiative.id);
+
                             return (
                               <div key={idx} style={{ minWidth: 0 }}>
-                                {!hasComments ? (
+                                {!hasComments && !showingInput ? (
                                   <div>
                                     <div style={{ fontSize: 10, color: 'var(--ink-3)', fontStyle: 'italic', marginBottom: 4 }}>
                                       No comments
@@ -431,7 +503,7 @@ export default function RianDashboard() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        alert('Comment input coming soon!');
+                                        toggleCommentInput(initiative.id);
                                       }}
                                       style={{
                                         padding: '2px 8px',
@@ -446,6 +518,73 @@ export default function RianDashboard() {
                                     >
                                       + Add comment
                                     </button>
+                                  </div>
+                                ) : showingInput && !hasComments ? (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <textarea
+                                      value={commentInputs[initiative.id] || ''}
+                                      onChange={(e) => {
+                                        setCommentInputs(prev => ({
+                                          ...prev,
+                                          [initiative.id]: e.target.value,
+                                        }));
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                          submitComment(initiative.id);
+                                        }
+                                        if (e.key === 'Escape') {
+                                          toggleCommentInput(initiative.id);
+                                        }
+                                      }}
+                                      placeholder="Add a comment... (Cmd+Enter to submit)"
+                                      disabled={isSubmitting}
+                                      style={{
+                                        width: '100%',
+                                        minHeight: 60,
+                                        padding: '6px 8px',
+                                        fontSize: 10,
+                                        fontFamily: 'var(--sans)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--r-sm)',
+                                        resize: 'vertical',
+                                        marginBottom: 4,
+                                      }}
+                                      autoFocus
+                                    />
+                                    <div style={{ display: 'flex', gap: 4 }}>
+                                      <button
+                                        onClick={() => submitComment(initiative.id)}
+                                        disabled={!commentInputs[initiative.id]?.trim() || isSubmitting}
+                                        style={{
+                                          padding: '4px 10px',
+                                          background: commentInputs[initiative.id]?.trim() ? 'var(--rust)' : 'var(--border)',
+                                          color: commentInputs[initiative.id]?.trim() ? '#fff' : 'var(--ink-3)',
+                                          border: 'none',
+                                          borderRadius: 'var(--r-sm)',
+                                          fontSize: 9,
+                                          fontWeight: 600,
+                                          cursor: commentInputs[initiative.id]?.trim() ? 'pointer' : 'not-allowed',
+                                        }}
+                                      >
+                                        {isSubmitting ? 'Posting...' : 'Post'}
+                                      </button>
+                                      <button
+                                        onClick={() => toggleCommentInput(initiative.id)}
+                                        disabled={isSubmitting}
+                                        style={{
+                                          padding: '4px 10px',
+                                          background: 'none',
+                                          color: 'var(--ink-2)',
+                                          border: '1px solid var(--border)',
+                                          borderRadius: 'var(--r-sm)',
+                                          fontSize: 9,
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <div>
@@ -497,45 +636,114 @@ export default function RianDashboard() {
                                         </div>
                                       </div>
                                     ))}
-                                    <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-                                      {allComments.length > 3 && (
+                                    {showingInput ? (
+                                      <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 8 }}>
+                                        <textarea
+                                          value={commentInputs[initiative.id] || ''}
+                                          onChange={(e) => {
+                                            setCommentInputs(prev => ({
+                                              ...prev,
+                                              [initiative.id]: e.target.value,
+                                            }));
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                              submitComment(initiative.id);
+                                            }
+                                            if (e.key === 'Escape') {
+                                              toggleCommentInput(initiative.id);
+                                            }
+                                          }}
+                                          placeholder="Add a comment... (Cmd+Enter to submit)"
+                                          disabled={isSubmitting}
+                                          style={{
+                                            width: '100%',
+                                            minHeight: 50,
+                                            padding: '6px 8px',
+                                            fontSize: 10,
+                                            fontFamily: 'var(--sans)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--r-sm)',
+                                            resize: 'vertical',
+                                            marginBottom: 4,
+                                          }}
+                                          autoFocus
+                                        />
+                                        <div style={{ display: 'flex', gap: 4 }}>
+                                          <button
+                                            onClick={() => submitComment(initiative.id)}
+                                            disabled={!commentInputs[initiative.id]?.trim() || isSubmitting}
+                                            style={{
+                                              padding: '3px 8px',
+                                              background: commentInputs[initiative.id]?.trim() ? 'var(--rust)' : 'var(--border)',
+                                              color: commentInputs[initiative.id]?.trim() ? '#fff' : 'var(--ink-3)',
+                                              border: 'none',
+                                              borderRadius: 'var(--r-sm)',
+                                              fontSize: 8,
+                                              fontWeight: 600,
+                                              cursor: commentInputs[initiative.id]?.trim() ? 'pointer' : 'not-allowed',
+                                            }}
+                                          >
+                                            {isSubmitting ? 'Posting...' : 'Post'}
+                                          </button>
+                                          <button
+                                            onClick={() => toggleCommentInput(initiative.id)}
+                                            disabled={isSubmitting}
+                                            style={{
+                                              padding: '3px 8px',
+                                              background: 'none',
+                                              color: 'var(--ink-2)',
+                                              border: '1px solid var(--border)',
+                                              borderRadius: 'var(--r-sm)',
+                                              fontSize: 8,
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                                        {allComments.length > 3 && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleShowAllComments(initiative.id);
+                                            }}
+                                            style={{
+                                              padding: '2px 6px',
+                                              background: 'none',
+                                              border: '1px solid var(--border)',
+                                              borderRadius: 'var(--r-sm)',
+                                              fontSize: 8,
+                                              color: 'var(--ink-2)',
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            {showAll ? 'Show less' : `+${allComments.length - 3} more`}
+                                          </button>
+                                        )}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            toggleShowAllComments(initiative.id);
+                                            toggleCommentInput(initiative.id);
                                           }}
                                           style={{
                                             padding: '2px 6px',
-                                            background: 'none',
-                                            border: '1px solid var(--border)',
+                                            background: 'var(--rust)',
+                                            color: '#fff',
+                                            border: 'none',
                                             borderRadius: 'var(--r-sm)',
                                             fontSize: 8,
-                                            color: 'var(--ink-2)',
+                                            fontWeight: 600,
                                             cursor: 'pointer',
                                           }}
                                         >
-                                          {showAll ? 'Show less' : `+${allComments.length - 3} more`}
+                                          + Add
                                         </button>
-                                      )}
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          alert('Comment input coming soon!');
-                                        }}
-                                        style={{
-                                          padding: '2px 6px',
-                                          background: 'var(--rust)',
-                                          color: '#fff',
-                                          border: 'none',
-                                          borderRadius: 'var(--r-sm)',
-                                          fontSize: 8,
-                                          fontWeight: 600,
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        + Add
-                                      </button>
-                                    </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
