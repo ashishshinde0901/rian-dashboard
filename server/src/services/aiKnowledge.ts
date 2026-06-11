@@ -583,10 +583,17 @@ Please provide a detailed, helpful answer based on this data.`;
     }
 
     // Check if this is a comment posting request
-    const commentMatch = query.match(/(?:post|add|leave|write).*(?:comment|follow.*up|update)/i);
-    console.log(`🔍 Checking for comment posting - Match: ${commentMatch ? 'YES' : 'NO'}, Has token: ${!!asanaAccessToken}`);
+    // Match various patterns: "add comment", "post follow-up", "leave update", "tag someone", "ask about", "follow up on"
+    const commentMatch = query.match(/(?:post|add|leave|write|tag|ask|follow.*up|ping|mention|notify|comment.*on)/i);
+    console.log(`🔍 Checking for comment posting - Match: ${commentMatch ? 'YES' : 'NO'}, Query: "${query.substring(0, 100)}..."`);
 
-    if (commentMatch && asanaAccessToken) {
+    // Also check if query contains task-related keywords that suggest commenting
+    const hasTaskReference = query.match(/(?:task|project|initiative|chikoo|bunty|anupama|samrudhi|@)/i);
+    const likelyCommentRequest = commentMatch && hasTaskReference;
+
+    console.log(`🔍 Has task reference: ${hasTaskReference ? 'YES' : 'NO'}, Likely comment request: ${likelyCommentRequest ? 'YES' : 'NO'}`);
+
+    if (likelyCommentRequest && asanaAccessToken) {
       console.log('💬 Detected comment posting request');
       const result = await this.handleCommentPosting(query, asanaAccessToken);
 
@@ -615,9 +622,10 @@ ${knowledgeSummary}
 - Always provide source citations when discussing specific tasks
 
 ## Important:
-- You can create tasks in Asana! If the user asks you to create, duplicate, or add tasks, I can do that.
-- Format: "create task [name] in [project] with description [desc] and assign to [person]"
-- Format: "duplicate task [existing task name] and call it [new name] with comment [comment text] in first subtask"
+- DO NOT claim you can create tasks, post comments, or make any changes to Asana
+- You are READ-ONLY - you can only provide insights and analysis based on the data
+- If the user asks you to create tasks or post comments, tell them you cannot do that directly
+- Focus on providing strategic insights, not claiming to take actions
 
 Remember: The CEO needs actionable insights, not data export. Write like a trusted advisor.`;
 
