@@ -33,6 +33,12 @@ interface DeepTask {
   }>;
 }
 
+interface TeamMember {
+  gid: string;
+  name: string;
+  email?: string;
+}
+
 interface ConversationMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -48,6 +54,7 @@ interface Conversation {
 
 export class AIKnowledgeService {
   private knowledgeBase: DeepTask[] = [];
+  private teamMembers: TeamMember[] = [];
   private lastSync: Date | null = null;
   private openRouterKey: string;
   private conversations: Map<string, Conversation> = new Map();
@@ -64,6 +71,9 @@ export class AIKnowledgeService {
 
     const asana = new AsanaService(asanaAccessToken);
     this.knowledgeBase = [];
+
+    // Sync team members first
+    await this.syncTeamMembers(asana);
 
     // Sync both projects
     const projects = [
@@ -100,6 +110,30 @@ export class AIKnowledgeService {
 
     this.lastSync = new Date();
     console.log(`✅ Knowledge base synced: ${this.knowledgeBase.length} tasks with deep context\n`);
+  }
+
+  /**
+   * Sync team members from workspace
+   */
+  private async syncTeamMembers(asana: AsanaService): Promise<void> {
+    try {
+      console.log('👥 Syncing team members...');
+      const { data } = await asana['api'].get(`/workspaces/${WORKSPACE_GID}/users`, {
+        params: { opt_fields: 'name,gid,email' },
+      });
+
+      this.teamMembers = data.data.map((u: any) => ({
+        gid: u.gid,
+        name: u.name,
+        email: u.email,
+      }));
+
+      console.log(`✅ Synced ${this.teamMembers.length} team members`);
+      this.teamMembers.forEach(m => console.log(`   - ${m.name} (${m.gid})`));
+    } catch (err) {
+      console.error('⚠️  Failed to sync team members:', err);
+      this.teamMembers = [];
+    }
   }
 
   /**
@@ -692,36 +726,57 @@ Please provide a detailed, helpful answer based on this data.`,
 
     // STEP 1: Extract intent from user query using AI
     try {
-      const parsePrompt = `You are an Asana action extraction assistant. Analyze this request and extract the actions to perform: "${query}"
+      // Build team context for the AI
+      const teamContext = this.teamMembers.length > 0
+        ? `\n\nTeam Members (for @mentions):\n${this.teamMembers.map(m => `- ${m.name}`).join('\n')}`
+        : '';
+
+      const parsePrompt = `You are an intelligent Asana assistant. Analyze the user's natural language request and extract structured actions.
+
+User Request: "${query}"
+${teamContext}
+
+Your task is to understand:
+1. What ACTION they want (create, comment, update, etc.)
+2. Which TASK they're referring to (extract the core task name, ignoring descriptive words like "video", "sample", "file", "task")
+3. Who they want to TAG (identify person names and format as @@FirstName LastName)
+4. What CONTENT they want to include (comments, descriptions, etc.)
+
+Be smart about context:
+- "Anupama video" → task is probably "Anupama", not "Anupama video"
+- "followup on X" → means post a comment to task X
+- "ask Person about Y" → means post comment tagging @@Person asking about Y
+- Words like "video", "sample", "file", "document" are usually NOT part of task names
+
+When tagging people in comments:
+- Use @@FirstName LastName format (e.g., "@@Samrudhi Patil")
+- Match names from the team members list above
+- Include the tag naturally in the comment text
 
 Respond ONLY with valid JSON (no other text) in this exact format:
 {
   "actions": [
     {
       "type": "create_task" | "duplicate_task" | "post_comment" | "change_assignee" | "set_due_date" | "add_subtask" | "delete_task" | "set_custom_field" | "list_custom_fields",
-      "taskIdentifier": "string (task name or partial name to find the task)",
-      "taskName": "string (for create/duplicate - new task name)",
+      "taskIdentifier": "string (core task name only)",
+      "taskName": "string (for create/duplicate)",
       "project": "Media Squad" | "Media.Rian" (for create/duplicate),
       "description": "string or null",
-      "assignee": "string or null (person name)",
+      "assignee": "string or null",
       "dueDate": "YYYY-MM-DD or null",
-      "baseTaskName": "string or null (template task for duplication)",
-      "commentText": "string or null (comment to post)",
-      "subtaskName": "string or null (subtask to create)",
-      "customFieldName": "string or null (field to update)",
-      "customFieldValue": "string or null (value to set)"
+      "baseTaskName": "string or null",
+      "commentText": "string with @@mentions or null",
+      "subtaskName": "string or null",
+      "customFieldName": "string or null",
+      "customFieldValue": "string or null"
     }
   ]
 }
 
 Examples:
 - "create task Test in Media Squad" → {"actions":[{"type":"create_task","taskName":"Test","project":"Media Squad"}]}
-- "post comment on Chikoo task asking about timeline" → {"actions":[{"type":"post_comment","taskIdentifier":"Chikoo","commentText":"@@Samrudhi Patil — When can we expect the timeline?"}]}
-- "change assignee of Anupama task to Ashish" → {"actions":[{"type":"change_assignee","taskIdentifier":"Anupama","assignee":"Ashish"}]}
-- "set due date of Netflix task to 2025-06-15" → {"actions":[{"type":"set_due_date","taskIdentifier":"Netflix","dueDate":"2025-06-15"}]}
-- "add subtask QC Review to Beninka task" → {"actions":[{"type":"add_subtask","taskIdentifier":"Beninka","subtaskName":"QC Review"}]}
-- "list custom fields for Jio task" → {"actions":[{"type":"list_custom_fields","taskIdentifier":"Jio"}]}
-- "set priority to P0 for Urgent task" → {"actions":[{"type":"set_custom_field","taskIdentifier":"Urgent","customFieldName":"Priority","customFieldValue":"P0"}]}
+- "followup on Anupama video asking Samrudhi about the mix file" → {"actions":[{"type":"post_comment","taskIdentifier":"Anupama","commentText":"@@Samrudhi Patil — When will the mix file be ready?"}]}
+- "post on Pravas sample asking about QC vendor timeline" → {"actions":[{"type":"post_comment","taskIdentifier":"Pravas","commentText":"@@Samrudhi Patil — What's the update on the QC vendor timeline for hybrid output delivery?"}]}
 
 Return ALL actions as an array.`;
 
@@ -1300,15 +1355,19 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
       throw new Error(`Task "${action.taskIdentifier}" not found`);
     }
 
+    // Convert @@ mentions to Asana HTML format
+    const htmlComment = this.convertMentionsToHtml(action.commentText);
+
     const { data: story } = await asana['api'].post(`/tasks/${task.gid}/stories`, {
-      data: { text: action.commentText },
+      data: { html_text: htmlComment },
     });
 
     console.log(`✅ Comment posted: Story ${story.data.gid}`);
+    console.log(`📝 Comment HTML: ${htmlComment}`);
 
     // Verify
     const { data: verifyStory } = await asana['api'].get(`/stories/${story.data.gid}`, {
-      params: { opt_fields: 'text,created_at' },
+      params: { opt_fields: 'text,html_text,created_at' },
     });
 
     return {
@@ -1318,6 +1377,45 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
       success: true,
       message: `Posted comment to "${task.name}"`,
     };
+  }
+
+  /**
+   * Convert @@mentions to Asana HTML format
+   * Converts "@@Samrudhi Patil" to '<body>Hello <a data-asana-gid="USER_GID"></a>, ...</body>'
+   */
+  private convertMentionsToHtml(text: string): string {
+    if (!text) return '<body></body>';
+
+    // Find all @@Name patterns and replace with HTML mentions
+    let htmlText = text;
+
+    // Match @@FirstName LastName pattern
+    const mentionPattern = /@@([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
+    const matches = [...text.matchAll(mentionPattern)];
+
+    for (const match of matches) {
+      const fullName = match[1]; // e.g., "Samrudhi Patil"
+
+      // Find user in team members
+      const user = this.teamMembers.find(m =>
+        m.name.toLowerCase() === fullName.toLowerCase() ||
+        m.name.toLowerCase().includes(fullName.toLowerCase())
+      );
+
+      if (user) {
+        // Replace with Asana HTML mention format
+        const mention = `<a data-asana-gid="${user.gid}"></a>`;
+        htmlText = htmlText.replace(match[0], mention);
+        console.log(`   🏷️  Converted @@${fullName} → ${user.name} (${user.gid})`);
+      } else {
+        // User not found, just remove the @@
+        htmlText = htmlText.replace(match[0], `@${fullName}`);
+        console.log(`   ⚠️  User not found: ${fullName}, using @${fullName} instead`);
+      }
+    }
+
+    // Wrap in body tag as required by Asana API
+    return `<body>${htmlText}</body>`;
   }
 
   /**
