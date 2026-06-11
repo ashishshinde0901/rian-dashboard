@@ -790,12 +790,20 @@ Examples:
         console.log(`🔍 Verifying task creation...`);
         const { data: verifyTask } = await asana['api'].get(`/tasks/${newTask.data.gid}`, {
           params: {
-            opt_fields: 'name,gid,permalink_url,created_at',
+            opt_fields: 'name,gid,permalink_url,created_at,completed,workspace.gid,workspace.name,memberships.project.gid,memberships.project.name',
           },
         });
 
         console.log(`✅ VERIFIED: Task exists in Asana - ${verifyTask.data.name} (${verifyTask.data.gid})`);
         console.log(`🔗 Task URL: ${verifyTask.data.permalink_url}`);
+        console.log(`📋 Workspace: ${verifyTask.data.workspace?.name || 'Unknown'} (${verifyTask.data.workspace?.gid || 'N/A'})`);
+        console.log(`🗂️  Project memberships:`, JSON.stringify(verifyTask.data.memberships || [], null, 2));
+        console.log(`✔️  Completed: ${verifyTask.data.completed}`);
+
+        // Check if task was somehow marked as deleted/completed
+        if (verifyTask.data.completed) {
+          console.log(`⚠️  WARNING: Task was marked as completed immediately after creation!`);
+        }
 
         const taskLink = verifyTask.data.permalink_url || `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
 
@@ -809,6 +817,7 @@ Examples:
 - **Duplicated from:** ${baseTask.name}
 - **Subtasks:** ${subtaskCount} subtasks copied${parsed.commentText ? '\n- **First subtask comment:** Added' : ''}
 - **Created at:** ${new Date(verifyTask.data.created_at).toLocaleString()}
+- **Status:** ${verifyTask.data.completed ? '⚠️ Completed (unusual!)' : 'Active'}
 
 ✅ Confirmed to exist in Asana.`,
         };
@@ -833,12 +842,20 @@ Examples:
         console.log(`🔍 Verifying task creation...`);
         const { data: verifyTask } = await asana['api'].get(`/tasks/${newTask.data.gid}`, {
           params: {
-            opt_fields: 'name,gid,permalink_url,created_at,assignee.name',
+            opt_fields: 'name,gid,permalink_url,created_at,assignee.name,completed,workspace.gid,workspace.name,memberships.project.gid,memberships.project.name',
           },
         });
 
         console.log(`✅ VERIFIED: Task exists in Asana - ${verifyTask.data.name} (${verifyTask.data.gid})`);
         console.log(`🔗 Task URL: ${verifyTask.data.permalink_url}`);
+        console.log(`📋 Workspace: ${verifyTask.data.workspace?.name || 'Unknown'} (${verifyTask.data.workspace?.gid || 'N/A'})`);
+        console.log(`🗂️  Project memberships:`, JSON.stringify(verifyTask.data.memberships || [], null, 2));
+        console.log(`✔️  Completed: ${verifyTask.data.completed}`);
+
+        // Check if task was somehow marked as deleted/completed
+        if (verifyTask.data.completed) {
+          console.log(`⚠️  WARNING: Task was marked as completed immediately after creation!`);
+        }
 
         const taskLink = verifyTask.data.permalink_url || `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
 
@@ -851,6 +868,7 @@ Examples:
 - **Project:** ${parsed.project}
 ${verifyTask.data.assignee?.name ? `- **Assigned to:** ${verifyTask.data.assignee.name}` : ''}
 - **Created at:** ${new Date(verifyTask.data.created_at).toLocaleString()}
+- **Status:** ${verifyTask.data.completed ? '⚠️ Completed (unusual!)' : 'Active'}
 
 ✅ Confirmed to exist in Asana.`,
         };
