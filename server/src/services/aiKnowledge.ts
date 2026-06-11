@@ -679,7 +679,7 @@ Please provide a detailed, helpful answer based on this data.`,
   }
 
   /**
-   * Handle task creation requests using AI to parse intent
+   * Handle task creation requests - extract intent, execute, and verify
    */
   private async handleTaskCreation(
     query: string,
@@ -689,20 +689,24 @@ Please provide a detailed, helpful answer based on this data.`,
 
     const asana = new AsanaService(asanaAccessToken);
 
-    // Use AI to parse the task creation intent
+    // STEP 1: Extract intent from user query
     try {
-      const parsePrompt = `Extract task creation details from this request: "${query}"
+      const parsePrompt = `You are a task extraction assistant. Extract task creation details from this request: "${query}"
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON (no other text) in this exact format:
 {
-  "action": "create_task" | "duplicate_task" | "create_subtask",
+  "action": "create_task" | "duplicate_task",
   "project": "Media Squad" | "Media.Rian",
   "taskName": "string",
-  "description": "string (optional)",
-  "assignee": "string (optional)",
-  "baseTaskName": "string (if duplicating)",
-  "subtaskComment": "string (if adding comment to subtask)"
-}`;
+  "description": "string or null",
+  "assignee": "string or null",
+  "baseTaskName": "string or null (if duplicating, extract the template task name)",
+  "commentText": "string or null (comment to add to task or first subtask)"
+}
+
+Examples:
+- "duplicate Dubbing Template task and call it Netflix" → {"action":"duplicate_task","project":"Media Squad","taskName":"Netflix","baseTaskName":"Dubbing Template","commentText":null,...}
+- "create task called Test in Media.Rian" → {"action":"create_task","project":"Media.Rian","taskName":"Test",...}`;
 
       const parseResponse = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
@@ -726,20 +730,26 @@ Respond ONLY with valid JSON in this exact format:
       const parsed = JSON.parse(responseContent);
       console.log('📝 Parsed intent:', JSON.stringify(parsed, null, 2));
 
-      // Execute the task creation based on parsed intent
+      // STEP 2: Execute the task creation based on parsed intent
       if (parsed.action === 'duplicate_task') {
+        console.log(`🔍 Finding base task: "${parsed.baseTaskName}"`);
+
         // Find the base task
         const baseTask = this.knowledgeBase.find(t =>
           t.name.toLowerCase().includes(parsed.baseTaskName.toLowerCase())
         );
 
         if (!baseTask) {
+          console.log(`❌ Base task not found: "${parsed.baseTaskName}"`);
           return { answer: `❌ Could not find task "${parsed.baseTaskName}" to duplicate.` };
         }
+
+        console.log(`✅ Found base task: ${baseTask.name} (${baseTask.gid})`);
 
         const projectGid = parsed.project === 'Media Squad' ? MEDIA_SQUAD_PROJECT_GID : MEDIA_RIAN_PROJECT_GID;
 
         // Create new task by duplicating
+        console.log(`📝 Creating new task: "${parsed.taskName}" in ${parsed.project}`);
         const { data: newTask } = await asana['api'].post('/tasks', {
           data: {
             name: parsed.taskName,
@@ -749,10 +759,13 @@ Respond ONLY with valid JSON in this exact format:
           },
         });
 
-        console.log(`✅ Created task: ${newTask.data.gid}`);
+        console.log(`✅ Created task with GID: ${newTask.data.gid}`);
 
         // Copy subtasks if they exist
+        let subtaskCount = 0;
         if (baseTask.subtasks && baseTask.subtasks.length > 0) {
+          console.log(`📋 Copying ${baseTask.subtasks.length} subtasks...`);
+
           for (const subtask of baseTask.subtasks) {
             const { data: newSubtask } = await asana['api'].post('/tasks', {
               data: {
@@ -760,33 +773,51 @@ Respond ONLY with valid JSON in this exact format:
                 parent: newTask.data.gid,
               },
             });
+            subtaskCount++;
+            console.log(`  ✅ Created subtask ${subtaskCount}/${baseTask.subtasks.length}: ${subtask.name}`);
 
             // Add comment to first subtask if requested
-            if (parsed.subtaskComment && baseTask.subtasks.indexOf(subtask) === 0) {
+            if (parsed.commentText && baseTask.subtasks.indexOf(subtask) === 0) {
               await asana['api'].post(`/tasks/${newSubtask.data.gid}/stories`, {
-                data: { text: parsed.subtaskComment },
+                data: { text: parsed.commentText },
               });
-              console.log(`💬 Added comment to first subtask`);
+              console.log(`  💬 Added comment to first subtask`);
             }
           }
         }
 
-        const taskLink = `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
-        return {
-          answer: `✅ **Task created successfully!**
+        // STEP 3: Verify the task was created by fetching it
+        console.log(`🔍 Verifying task creation...`);
+        const { data: verifyTask } = await asana['api'].get(`/tasks/${newTask.data.gid}`, {
+          params: {
+            opt_fields: 'name,gid,permalink_url,created_at',
+          },
+        });
 
-**New Task:** [${parsed.taskName}](${taskLink})
+        console.log(`✅ VERIFIED: Task exists in Asana - ${verifyTask.data.name} (${verifyTask.data.gid})`);
+        console.log(`🔗 Task URL: ${verifyTask.data.permalink_url}`);
+
+        const taskLink = verifyTask.data.permalink_url || `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
+
+        // STEP 4: Return verified results
+        return {
+          answer: `✅ **Task created and verified!**
+
+**New Task:** [${verifyTask.data.name}](${taskLink})
+- **GID:** ${verifyTask.data.gid}
 - **Project:** ${parsed.project}
 - **Duplicated from:** ${baseTask.name}
-- **Subtasks:** ${baseTask.subtasks?.length || 0} subtasks copied${parsed.subtaskComment ? '\n- **First subtask comment:** Added' : ''}
+- **Subtasks:** ${subtaskCount} subtasks copied${parsed.commentText ? '\n- **First subtask comment:** Added' : ''}
+- **Created at:** ${new Date(verifyTask.data.created_at).toLocaleString()}
 
-You can view it in Asana using the link above.`,
+✅ Confirmed to exist in Asana.`,
         };
       }
 
       if (parsed.action === 'create_task') {
         const projectGid = parsed.project === 'Media Squad' ? MEDIA_SQUAD_PROJECT_GID : MEDIA_RIAN_PROJECT_GID;
 
+        console.log(`📝 Creating new task: "${parsed.taskName}" in ${parsed.project}`);
         const { data: newTask } = await asana['api'].post('/tasks', {
           data: {
             name: parsed.taskName,
@@ -796,15 +827,32 @@ You can view it in Asana using the link above.`,
           },
         });
 
-        const taskLink = `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
+        console.log(`✅ Created task with GID: ${newTask.data.gid}`);
+
+        // STEP 3: Verify the task was created
+        console.log(`🔍 Verifying task creation...`);
+        const { data: verifyTask } = await asana['api'].get(`/tasks/${newTask.data.gid}`, {
+          params: {
+            opt_fields: 'name,gid,permalink_url,created_at,assignee.name',
+          },
+        });
+
+        console.log(`✅ VERIFIED: Task exists in Asana - ${verifyTask.data.name} (${verifyTask.data.gid})`);
+        console.log(`🔗 Task URL: ${verifyTask.data.permalink_url}`);
+
+        const taskLink = verifyTask.data.permalink_url || `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
+
+        // STEP 4: Return verified results
         return {
-          answer: `✅ **Task created successfully!**
+          answer: `✅ **Task created and verified!**
 
-**New Task:** [${parsed.taskName}](${taskLink})
+**New Task:** [${verifyTask.data.name}](${taskLink})
+- **GID:** ${verifyTask.data.gid}
 - **Project:** ${parsed.project}
-${parsed.assignee ? `- **Assigned to:** ${parsed.assignee}` : ''}
+${verifyTask.data.assignee?.name ? `- **Assigned to:** ${verifyTask.data.assignee.name}` : ''}
+- **Created at:** ${new Date(verifyTask.data.created_at).toLocaleString()}
 
-You can view it in Asana using the link above.`,
+✅ Confirmed to exist in Asana.`,
         };
       }
 
