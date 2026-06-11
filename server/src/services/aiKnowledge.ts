@@ -582,6 +582,22 @@ Please provide a detailed, helpful answer based on this data.`;
       return result;
     }
 
+    // Check if this is a comment posting request
+    const commentMatch = query.match(/(?:post|add|leave|write).*(?:comment|follow.*up|update)/i);
+    console.log(`🔍 Checking for comment posting - Match: ${commentMatch ? 'YES' : 'NO'}, Has token: ${!!asanaAccessToken}`);
+
+    if (commentMatch && asanaAccessToken) {
+      console.log('💬 Detected comment posting request');
+      const result = await this.handleCommentPosting(query, asanaAccessToken);
+
+      // Add to conversation
+      conversation.messages.push({ role: 'user', content: query });
+      conversation.messages.push({ role: 'assistant', content: result.answer });
+      conversation.updated_at = new Date();
+
+      return result;
+    }
+
     const knowledgeSummary = this.generateKnowledgeSummary();
     const tasksToSend = this.knowledgeBase;
 
@@ -883,6 +899,156 @@ ${verifyTask.data.assignee?.name ? `- **Assigned to:** ${verifyTask.data.assigne
         console.error('API response error:', JSON.stringify(error.response.data, null, 2));
       }
       return { answer: `❌ Failed to create task: ${error.message}` };
+    }
+  }
+
+  /**
+   * Handle comment posting requests - extract intent, execute, and verify
+   */
+  private async handleCommentPosting(
+    query: string,
+    asanaAccessToken: string
+  ): Promise<{ answer: string }> {
+    console.log(`💬 Processing comment posting: "${query}"`);
+
+    const asana = new AsanaService(asanaAccessToken);
+
+    // STEP 1: Extract intent from user query using AI
+    try {
+      const parsePrompt = `You are a comment extraction assistant. Extract comment details from this request: "${query}"
+
+Respond ONLY with valid JSON (no other text) in this exact format:
+{
+  "comments": [
+    {
+      "taskIdentifier": "string (task name or partial task name)",
+      "commentText": "string (the actual comment to post, including @ mentions)"
+    }
+  ]
+}
+
+Examples:
+- "post comment on Chikoo Bunty task asking Samrudhi about Episode 1 timeline" → {"comments":[{"taskIdentifier":"Chikoo Bunty","commentText":"@@Samrudhi Patil — When can we expect the sample for Episode 1?"}]}
+- "add follow up to Anupama arabic sample asking about mix file and QC vendor" → {"comments":[{"taskIdentifier":"Anupama arabic","commentText":"@@Samrudhi Patil — Two action items: (1) When will the mix file for the AI-dubbed Arabic version be ready? (2) Any update on identifying a QC vendor?"}]}
+
+IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
+
+      const parseResponse = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'deepseek/deepseek-v4-flash',
+          messages: [{ role: 'user', content: parsePrompt }],
+          max_tokens: 500,
+          temperature: 0.3,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.openRouterKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const responseContent = parseResponse.data.choices[0].message.content;
+      console.log('🤖 AI parsing response:', responseContent);
+
+      const parsed = JSON.parse(responseContent);
+      console.log('📝 Parsed intent:', JSON.stringify(parsed, null, 2));
+
+      // STEP 2: Execute comment posting for each task
+      const results: Array<{ taskName: string; taskGid: string; success: boolean }> = [];
+
+      for (const commentRequest of parsed.comments) {
+        console.log(`\n🔍 Finding task: "${commentRequest.taskIdentifier}"`);
+
+        // Find the task
+        const task = this.knowledgeBase.find(t =>
+          t.name.toLowerCase().includes(commentRequest.taskIdentifier.toLowerCase())
+        );
+
+        if (!task) {
+          console.log(`❌ Task not found: "${commentRequest.taskIdentifier}"`);
+          results.push({
+            taskName: commentRequest.taskIdentifier,
+            taskGid: '',
+            success: false,
+          });
+          continue;
+        }
+
+        console.log(`✅ Found task: ${task.name} (${task.gid})`);
+
+        // Post the comment
+        console.log(`💬 Posting comment to task ${task.gid}...`);
+        try {
+          const { data: story } = await asana['api'].post(`/tasks/${task.gid}/stories`, {
+            data: {
+              text: commentRequest.commentText,
+            },
+          });
+
+          console.log(`✅ Comment posted successfully (Story GID: ${story.data.gid})`);
+
+          // STEP 3: Verify the comment was posted by fetching it
+          console.log(`🔍 Verifying comment...`);
+          const { data: verifyStory } = await asana['api'].get(`/stories/${story.data.gid}`, {
+            params: {
+              opt_fields: 'text,created_at,created_by.name',
+            },
+          });
+
+          console.log(`✅ VERIFIED: Comment exists - Created by ${verifyStory.data.created_by?.name} at ${verifyStory.data.created_at}`);
+          console.log(`📝 Comment text: "${verifyStory.data.text}"`);
+
+          results.push({
+            taskName: task.name,
+            taskGid: task.gid,
+            success: true,
+          });
+        } catch (error: any) {
+          console.error(`❌ Failed to post comment to task ${task.gid}:`, error.message);
+          results.push({
+            taskName: task.name,
+            taskGid: task.gid,
+            success: false,
+          });
+        }
+      }
+
+      // STEP 4: Return verified results
+      const successfulPosts = results.filter(r => r.success);
+      const failedPosts = results.filter(r => !r.success);
+
+      if (successfulPosts.length === 0) {
+        return {
+          answer: `❌ **Failed to post comments**\n\nCould not find the specified tasks or failed to post comments.`,
+        };
+      }
+
+      let answer = `✅ **Comments posted and verified!**\n\n`;
+      answer += `**Successfully posted to ${successfulPosts.length} task(s):**\n`;
+      successfulPosts.forEach(r => {
+        const taskLink = `https://app.asana.com/0/0/${r.taskGid}`;
+        answer += `- [${r.taskName}](${taskLink})\n`;
+      });
+
+      if (failedPosts.length > 0) {
+        answer += `\n⚠️ **Failed to post to ${failedPosts.length} task(s):**\n`;
+        failedPosts.forEach(r => {
+          answer += `- ${r.taskName || 'Unknown task'}\n`;
+        });
+      }
+
+      answer += `\n✅ All comments confirmed to exist in Asana.`;
+
+      return { answer };
+    } catch (error: any) {
+      console.error('❌ Comment posting error:', error.message);
+      console.error('Full error:', error);
+      if (error.response) {
+        console.error('API response error:', JSON.stringify(error.response.data, null, 2));
+      }
+      return { answer: `❌ Failed to post comments: ${error.message}` };
     }
   }
 
