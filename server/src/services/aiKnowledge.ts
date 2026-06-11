@@ -567,7 +567,9 @@ Please provide a detailed, helpful answer based on this data.`;
     }
 
     // Check if this is a task creation request
-    const creationMatch = query.match(/(?:create|make|add|duplicate)\s+(?:task|subtask)/i);
+    const creationMatch = query.match(/(?:create|make|add|duplicate)/i);
+    console.log(`🔍 Checking for task creation - Match: ${creationMatch ? 'YES' : 'NO'}, Has token: ${!!asanaAccessToken}`);
+
     if (creationMatch && asanaAccessToken) {
       console.log('🔨 Detected task creation request');
       const result = await this.handleTaskCreation(query, asanaAccessToken);
@@ -718,8 +720,11 @@ Respond ONLY with valid JSON in this exact format:
         }
       );
 
-      const parsed = JSON.parse(parseResponse.data.choices[0].message.content);
-      console.log('📝 Parsed intent:', parsed);
+      const responseContent = parseResponse.data.choices[0].message.content;
+      console.log('🤖 AI parsing response:', responseContent);
+
+      const parsed = JSON.parse(responseContent);
+      console.log('📝 Parsed intent:', JSON.stringify(parsed, null, 2));
 
       // Execute the task creation based on parsed intent
       if (parsed.action === 'duplicate_task') {
@@ -803,9 +808,14 @@ You can view it in Asana using the link above.`,
         };
       }
 
+      console.log('⚠️  Unknown action type:', parsed.action);
       return { answer: '❌ Could not understand task creation request. Please try rephrasing.' };
     } catch (error: any) {
       console.error('❌ Task creation error:', error.message);
+      console.error('Full error:', error);
+      if (error.response) {
+        console.error('API response error:', JSON.stringify(error.response.data, null, 2));
+      }
       return { answer: `❌ Failed to create task: ${error.message}` };
     }
   }
