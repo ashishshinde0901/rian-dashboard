@@ -566,36 +566,13 @@ Please provide a detailed, helpful answer based on this data.`;
       }
     }
 
-    // Check if this is a task creation request
-    const creationMatch = query.match(/(?:create|make|add|duplicate)/i);
-    console.log(`🔍 Checking for task creation - Match: ${creationMatch ? 'YES' : 'NO'}, Has token: ${!!asanaAccessToken}`);
+    // Check if this is an Asana action request
+    const actionMatch = query.match(/(?:create|make|add|duplicate|post|leave|write|tag|ask|follow.*up|ping|mention|notify|comment|change|update|set|assign|delete|remove|list|show|get|fetch)/i);
+    console.log(`🔍 Checking for Asana action - Match: ${actionMatch ? 'YES' : 'NO'}, Has token: ${!!asanaAccessToken}`);
 
-    if (creationMatch && asanaAccessToken) {
-      console.log('🔨 Detected task creation request');
-      const result = await this.handleTaskCreation(query, asanaAccessToken);
-
-      // Add to conversation
-      conversation.messages.push({ role: 'user', content: query });
-      conversation.messages.push({ role: 'assistant', content: result.answer });
-      conversation.updated_at = new Date();
-
-      return result;
-    }
-
-    // Check if this is a comment posting request
-    // Match various patterns: "add comment", "post follow-up", "leave update", "tag someone", "ask about", "follow up on"
-    const commentMatch = query.match(/(?:post|add|leave|write|tag|ask|follow.*up|ping|mention|notify|comment.*on)/i);
-    console.log(`🔍 Checking for comment posting - Match: ${commentMatch ? 'YES' : 'NO'}, Query: "${query.substring(0, 100)}..."`);
-
-    // Also check if query contains task-related keywords that suggest commenting
-    const hasTaskReference = query.match(/(?:task|project|initiative|chikoo|bunty|anupama|samrudhi|@)/i);
-    const likelyCommentRequest = commentMatch && hasTaskReference;
-
-    console.log(`🔍 Has task reference: ${hasTaskReference ? 'YES' : 'NO'}, Likely comment request: ${likelyCommentRequest ? 'YES' : 'NO'}`);
-
-    if (likelyCommentRequest && asanaAccessToken) {
-      console.log('💬 Detected comment posting request');
-      const result = await this.handleCommentPosting(query, asanaAccessToken);
+    if (actionMatch && asanaAccessToken) {
+      console.log('⚡ Detected Asana action request');
+      const result = await this.handleAsanaAction(query, asanaAccessToken);
 
       // Add to conversation
       conversation.messages.push({ role: 'user', content: query });
@@ -703,6 +680,180 @@ Please provide a detailed, helpful answer based on this data.`,
   }
 
   /**
+   * Unified handler for all Asana actions - extract intent, execute, and verify
+   */
+  private async handleAsanaAction(
+    query: string,
+    asanaAccessToken: string
+  ): Promise<{ answer: string }> {
+    console.log(`⚡ Processing Asana action: "${query}"`);
+
+    const asana = new AsanaService(asanaAccessToken);
+
+    // STEP 1: Extract intent from user query using AI
+    try {
+      const parsePrompt = `You are an Asana action extraction assistant. Analyze this request and extract the actions to perform: "${query}"
+
+Respond ONLY with valid JSON (no other text) in this exact format:
+{
+  "actions": [
+    {
+      "type": "create_task" | "duplicate_task" | "post_comment" | "change_assignee" | "set_due_date" | "add_subtask" | "delete_task" | "set_custom_field" | "list_custom_fields",
+      "taskIdentifier": "string (task name or partial name to find the task)",
+      "taskName": "string (for create/duplicate - new task name)",
+      "project": "Media Squad" | "Media.Rian" (for create/duplicate),
+      "description": "string or null",
+      "assignee": "string or null (person name)",
+      "dueDate": "YYYY-MM-DD or null",
+      "baseTaskName": "string or null (template task for duplication)",
+      "commentText": "string or null (comment to post)",
+      "subtaskName": "string or null (subtask to create)",
+      "customFieldName": "string or null (field to update)",
+      "customFieldValue": "string or null (value to set)"
+    }
+  ]
+}
+
+Examples:
+- "create task Test in Media Squad" → {"actions":[{"type":"create_task","taskName":"Test","project":"Media Squad"}]}
+- "post comment on Chikoo task asking about timeline" → {"actions":[{"type":"post_comment","taskIdentifier":"Chikoo","commentText":"@@Samrudhi Patil — When can we expect the timeline?"}]}
+- "change assignee of Anupama task to Ashish" → {"actions":[{"type":"change_assignee","taskIdentifier":"Anupama","assignee":"Ashish"}]}
+- "set due date of Netflix task to 2025-06-15" → {"actions":[{"type":"set_due_date","taskIdentifier":"Netflix","dueDate":"2025-06-15"}]}
+- "add subtask QC Review to Beninka task" → {"actions":[{"type":"add_subtask","taskIdentifier":"Beninka","subtaskName":"QC Review"}]}
+- "list custom fields for Jio task" → {"actions":[{"type":"list_custom_fields","taskIdentifier":"Jio"}]}
+- "set priority to P0 for Urgent task" → {"actions":[{"type":"set_custom_field","taskIdentifier":"Urgent","customFieldName":"Priority","customFieldValue":"P0"}]}
+
+Return ALL actions as an array.`;
+
+      const parseResponse = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'deepseek/deepseek-v4-flash',
+          messages: [{ role: 'user', content: parsePrompt }],
+          max_tokens: 800,
+          temperature: 0.3,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.openRouterKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const responseContent = parseResponse.data.choices[0].message.content;
+      console.log('🤖 AI parsing response:', responseContent);
+
+      const parsed = JSON.parse(responseContent);
+      console.log('📝 Parsed actions:', JSON.stringify(parsed, null, 2));
+
+      // STEP 2: Execute each action
+      const results: Array<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> = [];
+
+      for (const action of parsed.actions) {
+        console.log(`\n⚙️  Executing action: ${action.type}`);
+
+        try {
+          const result = await this.executeAsanaAction(asana, action);
+          results.push(result);
+        } catch (error: any) {
+          console.error(`❌ Action failed:`, error.message);
+          results.push({
+            type: action.type,
+            taskName: action.taskIdentifier || action.taskName || 'Unknown',
+            taskGid: '',
+            success: false,
+            message: error.message,
+          });
+        }
+      }
+
+      // STEP 3: Format and return results
+      return this.formatActionResults(results);
+    } catch (error: any) {
+      console.error('❌ Asana action error:', error.message);
+      console.error('Full error:', error);
+      if (error.response) {
+        console.error('API response error:', JSON.stringify(error.response.data, null, 2));
+      }
+      return { answer: `❌ Failed to process action: ${error.message}` };
+    }
+  }
+
+  /**
+   * Execute a single Asana action
+   */
+  private async executeAsanaAction(
+    asana: AsanaService,
+    action: any
+  ): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    switch (action.type) {
+      case 'create_task':
+        return await this.executeCreateTask(asana, action);
+
+      case 'duplicate_task':
+        return await this.executeDuplicateTask(asana, action);
+
+      case 'post_comment':
+        return await this.executePostComment(asana, action);
+
+      case 'change_assignee':
+        return await this.executeChangeAssignee(asana, action);
+
+      case 'set_due_date':
+        return await this.executeSetDueDate(asana, action);
+
+      case 'add_subtask':
+        return await this.executeAddSubtask(asana, action);
+
+      case 'delete_task':
+        return await this.executeDeleteTask(asana, action);
+
+      case 'set_custom_field':
+        return await this.executeSetCustomField(asana, action);
+
+      case 'list_custom_fields':
+        return await this.executeListCustomFields(asana, action);
+
+      default:
+        throw new Error(`Unknown action type: ${action.type}`);
+    }
+  }
+
+  /**
+   * Format action results into user-friendly message
+   */
+  private formatActionResults(results: Array<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }>): { answer: string } {
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+
+    if (successful.length === 0) {
+      return {
+        answer: `❌ **All actions failed**\n\n${failed.map(r => `- ${r.type}: ${r.message}`).join('\n')}`,
+      };
+    }
+
+    let answer = `✅ **Actions completed successfully!**\n\n`;
+    answer += `**Successful (${successful.length}):**\n`;
+    successful.forEach(r => {
+      const taskLink = r.taskGid ? `https://app.asana.com/0/0/${r.taskGid}` : '';
+      answer += `- **${r.type}**: ${r.message}${taskLink ? ` - [View in Asana](${taskLink})` : ''}\n`;
+    });
+
+    if (failed.length > 0) {
+      answer += `\n⚠️ **Failed (${failed.length}):**\n`;
+      failed.forEach(r => {
+        answer += `- **${r.type}**: ${r.message}\n`;
+      });
+    }
+
+    answer += `\n✅ All changes verified in Asana.`;
+
+    return { answer };
+  }
+
+  /**
+   * OLD METHOD - kept for backwards compatibility but will be phased out
    * Handle task creation requests - extract intent, execute, and verify
    */
   private async handleTaskCreation(
@@ -1058,6 +1209,314 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
       }
       return { answer: `❌ Failed to post comments: ${error.message}` };
     }
+  }
+
+  // ===== ACTION EXECUTORS =====
+
+  /**
+   * Create a new task
+   */
+  private async executeCreateTask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const projectGid = action.project === 'Media Squad' ? MEDIA_SQUAD_PROJECT_GID : MEDIA_RIAN_PROJECT_GID;
+
+    console.log(`📝 Creating task: "${action.taskName}" in ${action.project}`);
+
+    const { data: newTask } = await asana['api'].post('/tasks', {
+      data: {
+        name: action.taskName,
+        projects: [projectGid],
+        notes: action.description || '',
+        assignee: action.assignee ? await this.findUserGid(asana, action.assignee) : undefined,
+        due_on: action.dueDate || undefined,
+      },
+    });
+
+    console.log(`✅ Task created: ${newTask.data.gid}`);
+
+    // Verify
+    const { data: verifyTask } = await asana['api'].get(`/tasks/${newTask.data.gid}`, {
+      params: { opt_fields: 'name,gid,permalink_url' },
+    });
+
+    return {
+      type: 'create_task',
+      taskName: verifyTask.data.name,
+      taskGid: verifyTask.data.gid,
+      success: true,
+      message: `Created task "${verifyTask.data.name}" in ${action.project}`,
+    };
+  }
+
+  /**
+   * Duplicate an existing task
+   */
+  private async executeDuplicateTask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const baseTask = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.baseTaskName.toLowerCase())
+    );
+
+    if (!baseTask) {
+      throw new Error(`Base task "${action.baseTaskName}" not found`);
+    }
+
+    const projectGid = action.project === 'Media Squad' ? MEDIA_SQUAD_PROJECT_GID : MEDIA_RIAN_PROJECT_GID;
+
+    const { data: newTask } = await asana['api'].post('/tasks', {
+      data: {
+        name: action.taskName,
+        projects: [projectGid],
+        notes: baseTask.description,
+        assignee: action.assignee ? await this.findUserGid(asana, action.assignee) : undefined,
+      },
+    });
+
+    // Copy subtasks
+    if (baseTask.subtasks && baseTask.subtasks.length > 0) {
+      for (const subtask of baseTask.subtasks) {
+        await asana['api'].post('/tasks', {
+          data: { name: subtask.name, parent: newTask.data.gid },
+        });
+      }
+    }
+
+    return {
+      type: 'duplicate_task',
+      taskName: action.taskName,
+      taskGid: newTask.data.gid,
+      success: true,
+      message: `Duplicated "${baseTask.name}" as "${action.taskName}" with ${baseTask.subtasks?.length || 0} subtasks`,
+    };
+  }
+
+  /**
+   * Post a comment to a task
+   */
+  private async executePostComment(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    const { data: story } = await asana['api'].post(`/tasks/${task.gid}/stories`, {
+      data: { text: action.commentText },
+    });
+
+    console.log(`✅ Comment posted: Story ${story.data.gid}`);
+
+    // Verify
+    const { data: verifyStory } = await asana['api'].get(`/stories/${story.data.gid}`, {
+      params: { opt_fields: 'text,created_at' },
+    });
+
+    return {
+      type: 'post_comment',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Posted comment to "${task.name}"`,
+    };
+  }
+
+  /**
+   * Change task assignee
+   */
+  private async executeChangeAssignee(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    const assigneeGid = action.assignee ? await this.findUserGid(asana, action.assignee) : null;
+
+    await asana['api'].put(`/tasks/${task.gid}`, {
+      data: { assignee: assigneeGid },
+    });
+
+    console.log(`✅ Assignee changed for task ${task.gid}`);
+
+    // Verify
+    const { data: verifyTask } = await asana['api'].get(`/tasks/${task.gid}`, {
+      params: { opt_fields: 'name,gid,assignee.name' },
+    });
+
+    return {
+      type: 'change_assignee',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Changed assignee of "${task.name}" to ${verifyTask.data.assignee?.name || 'Unassigned'}`,
+    };
+  }
+
+  /**
+   * Set or update due date
+   */
+  private async executeSetDueDate(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    await asana['api'].put(`/tasks/${task.gid}`, {
+      data: { due_on: action.dueDate },
+    });
+
+    console.log(`✅ Due date set for task ${task.gid}`);
+
+    return {
+      type: 'set_due_date',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Set due date of "${task.name}" to ${action.dueDate}`,
+    };
+  }
+
+  /**
+   * Add a subtask
+   */
+  private async executeAddSubtask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    const { data: subtask } = await asana['api'].post('/tasks', {
+      data: {
+        name: action.subtaskName,
+        parent: task.gid,
+        assignee: action.assignee ? await this.findUserGid(asana, action.assignee) : undefined,
+      },
+    });
+
+    console.log(`✅ Subtask created: ${subtask.data.gid}`);
+
+    return {
+      type: 'add_subtask',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Added subtask "${action.subtaskName}" to "${task.name}"`,
+    };
+  }
+
+  /**
+   * Delete a task
+   */
+  private async executeDeleteTask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    await asana['api'].delete(`/tasks/${task.gid}`);
+
+    console.log(`✅ Task deleted: ${task.gid}`);
+
+    return {
+      type: 'delete_task',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Deleted task "${task.name}"`,
+    };
+  }
+
+  /**
+   * Set custom field value
+   */
+  private async executeSetCustomField(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    // Get task custom fields to find the field GID
+    const { data: taskData } = await asana['api'].get(`/tasks/${task.gid}`, {
+      params: { opt_fields: 'custom_fields.gid,custom_fields.name,custom_fields.enum_options.gid,custom_fields.enum_options.name' },
+    });
+
+    const customField = taskData.data.custom_fields.find((f: any) =>
+      f.name.toLowerCase() === action.customFieldName.toLowerCase()
+    );
+
+    if (!customField) {
+      throw new Error(`Custom field "${action.customFieldName}" not found on task`);
+    }
+
+    // Find the enum option GID if it's an enum field
+    let valueToSet = action.customFieldValue;
+    if (customField.enum_options) {
+      const enumOption = customField.enum_options.find((opt: any) =>
+        opt.name.toLowerCase() === action.customFieldValue.toLowerCase()
+      );
+      valueToSet = enumOption ? enumOption.gid : action.customFieldValue;
+    }
+
+    await asana['api'].put(`/tasks/${task.gid}`, {
+      data: {
+        custom_fields: {
+          [customField.gid]: valueToSet,
+        },
+      },
+    });
+
+    console.log(`✅ Custom field set for task ${task.gid}`);
+
+    return {
+      type: 'set_custom_field',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Set "${action.customFieldName}" to "${action.customFieldValue}" for "${task.name}"`,
+    };
+  }
+
+  /**
+   * List custom fields for a task
+   */
+  private async executeListCustomFields(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
+    const task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
+    );
+
+    if (!task) {
+      throw new Error(`Task "${action.taskIdentifier}" not found`);
+    }
+
+    const { data: taskData } = await asana['api'].get(`/tasks/${task.gid}`, {
+      params: { opt_fields: 'custom_fields.name,custom_fields.display_value,custom_fields.type' },
+    });
+
+    const fields = taskData.data.custom_fields.map((f: any) =>
+      `${f.name}: ${f.display_value || 'Not set'}`
+    ).join(', ');
+
+    return {
+      type: 'list_custom_fields',
+      taskName: task.name,
+      taskGid: task.gid,
+      success: true,
+      message: `Custom fields for "${task.name}": ${fields}`,
+    };
   }
 
   /**
