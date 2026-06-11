@@ -33,10 +33,24 @@ interface DeepTask {
   }>;
 }
 
+interface ConversationMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: ConversationMessage[];
+  created_at: Date;
+  updated_at: Date;
+}
+
 export class AIKnowledgeService {
   private knowledgeBase: DeepTask[] = [];
   private lastSync: Date | null = null;
   private openRouterKey: string;
+  private conversations: Map<string, Conversation> = new Map();
 
   constructor(openRouterApiKey: string) {
     this.openRouterKey = openRouterApiKey;
@@ -482,5 +496,337 @@ Please provide a detailed, helpful answer based on this data.`;
       projects: [...new Set(this.knowledgeBase.map(t => t.project))],
       assignees: [...new Set(this.knowledgeBase.map(t => t.assignee))],
     };
+  }
+
+  /**
+   * Create a new conversation
+   */
+  createConversation(title: string = 'New Conversation'): Conversation {
+    const id = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const conversation: Conversation = {
+      id,
+      title,
+      messages: [],
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+    this.conversations.set(id, conversation);
+    console.log(`✅ Created conversation: ${id}`);
+    return conversation;
+  }
+
+  /**
+   * Get all conversations
+   */
+  getConversations(): Conversation[] {
+    return Array.from(this.conversations.values()).sort(
+      (a, b) => b.updated_at.getTime() - a.updated_at.getTime()
+    );
+  }
+
+  /**
+   * Get a specific conversation
+   */
+  getConversation(id: string): Conversation | null {
+    return this.conversations.get(id) || null;
+  }
+
+  /**
+   * Delete a conversation
+   */
+  deleteConversation(id: string): boolean {
+    return this.conversations.delete(id);
+  }
+
+  /**
+   * Answer query within a conversation context
+   */
+  async answerQueryInConversation(
+    conversationId: string,
+    query: string,
+    asanaAccessToken?: string
+  ): Promise<{
+    answer: string;
+    insights?: any;
+    sources?: Array<{ taskName: string; taskLink: string; taskGid: string }>;
+  }> {
+    console.log(`\n🤖 Processing query in conversation: ${conversationId}`);
+
+    let conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      conversation = this.createConversation();
+    }
+
+    // Auto-sync if knowledge base is stale
+    if (!this.lastSync || (Date.now() - this.lastSync.getTime()) > 5 * 60 * 1000) {
+      console.log('⚠️  Knowledge base is stale, syncing...');
+      const token = asanaAccessToken || process.env.ASANA_ACCESS_TOKEN;
+      if (token) {
+        await this.syncKnowledgeBase(token);
+      }
+    }
+
+    // Check if this is a task creation request
+    const creationMatch = query.match(/(?:create|make|add|duplicate)\s+(?:task|subtask)/i);
+    if (creationMatch && asanaAccessToken) {
+      console.log('🔨 Detected task creation request');
+      const result = await this.handleTaskCreation(query, asanaAccessToken);
+
+      // Add to conversation
+      conversation.messages.push({ role: 'user', content: query });
+      conversation.messages.push({ role: 'assistant', content: result.answer });
+      conversation.updated_at = new Date();
+
+      return result;
+    }
+
+    const knowledgeSummary = this.generateKnowledgeSummary();
+    const tasksToSend = this.knowledgeBase;
+
+    // Build conversation context - include all previous messages
+    const systemPrompt = `You are a professional executive assistant for a CEO, providing sharp business insights about Media.Rian and Media Squad projects.
+
+${knowledgeSummary}
+
+## Your Communication Style:
+- Write in clear, executive-level language - concise sentences that convey key information
+- Present insights as readable narratives, NOT raw data dumps
+- Use proper headings, bullet points, and formatting for easy scanning
+- Highlight critical issues, opportunities, and action items
+- When referencing specific tasks, include the task name and link like this: [Task Name](https://app.asana.com/0/0/TASK_GID)
+- Always provide source citations when discussing specific tasks
+
+## Important:
+- You can create tasks in Asana! If the user asks you to create, duplicate, or add tasks, I can do that.
+- Format: "create task [name] in [project] with description [desc] and assign to [person]"
+- Format: "duplicate task [existing task name] and call it [new name] with comment [comment text] in first subtask"
+
+Remember: The CEO needs actionable insights, not data export. Write like a trusted advisor.`;
+
+    // Include conversation history in the messages
+    const messages: ConversationMessage[] = [
+      { role: 'system', content: systemPrompt },
+      ...conversation.messages,  // Previous conversation context
+      {
+        role: 'user',
+        content: `User question: ${query}
+
+Here are all the tasks in our knowledge base:
+${JSON.stringify(tasksToSend, null, 2)}
+
+Please provide a detailed, helpful answer based on this data.`,
+      },
+    ];
+
+    try {
+      console.log(`🌐 Making API call with conversation context (${conversation.messages.length} previous messages)`);
+
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'deepseek/deepseek-v4-flash',
+          messages,
+          max_tokens: 2000,
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.openRouterKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const answer = response.data.choices[0].message.content;
+      console.log(`✅ AI response received (${answer.length} chars)`);
+
+      // Extract source citations
+      const sources: Array<{ taskName: string; taskLink: string; taskGid: string }> = [];
+      const linkMatches = answer.matchAll(/\[([^\]]+)\]\(https:\/\/app\.asana\.com\/0\/0\/(\d+)\)/g);
+      for (const match of linkMatches) {
+        sources.push({
+          taskName: match[1],
+          taskLink: match[0],
+          taskGid: match[2],
+        });
+      }
+
+      // Add to conversation history
+      conversation.messages.push({ role: 'user', content: query });
+      conversation.messages.push({ role: 'assistant', content: answer });
+      conversation.updated_at = new Date();
+
+      return {
+        answer,
+        sources: sources.length > 0 ? sources : undefined,
+        insights: this.generateInsights(),
+      };
+    } catch (error: any) {
+      console.error('❌ AI query error:', error.message);
+      const fallbackAnswer = this.fallbackAnswer(query);
+
+      conversation.messages.push({ role: 'user', content: query });
+      conversation.messages.push({ role: 'assistant', content: fallbackAnswer });
+      conversation.updated_at = new Date();
+
+      return {
+        answer: fallbackAnswer,
+        insights: this.generateInsights(),
+      };
+    }
+  }
+
+  /**
+   * Handle task creation requests using AI to parse intent
+   */
+  private async handleTaskCreation(
+    query: string,
+    asanaAccessToken: string
+  ): Promise<{ answer: string }> {
+    console.log(`🔨 Processing task creation: "${query}"`);
+
+    const asana = new AsanaService(asanaAccessToken);
+
+    // Use AI to parse the task creation intent
+    try {
+      const parsePrompt = `Extract task creation details from this request: "${query}"
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "action": "create_task" | "duplicate_task" | "create_subtask",
+  "project": "Media Squad" | "Media.Rian",
+  "taskName": "string",
+  "description": "string (optional)",
+  "assignee": "string (optional)",
+  "baseTaskName": "string (if duplicating)",
+  "subtaskComment": "string (if adding comment to subtask)"
+}`;
+
+      const parseResponse = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'deepseek/deepseek-v4-flash',
+          messages: [{ role: 'user', content: parsePrompt }],
+          max_tokens: 500,
+          temperature: 0.3,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.openRouterKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const parsed = JSON.parse(parseResponse.data.choices[0].message.content);
+      console.log('📝 Parsed intent:', parsed);
+
+      // Execute the task creation based on parsed intent
+      if (parsed.action === 'duplicate_task') {
+        // Find the base task
+        const baseTask = this.knowledgeBase.find(t =>
+          t.name.toLowerCase().includes(parsed.baseTaskName.toLowerCase())
+        );
+
+        if (!baseTask) {
+          return { answer: `❌ Could not find task "${parsed.baseTaskName}" to duplicate.` };
+        }
+
+        const projectGid = parsed.project === 'Media Squad' ? MEDIA_SQUAD_PROJECT_GID : MEDIA_RIAN_PROJECT_GID;
+
+        // Create new task by duplicating
+        const { data: newTask } = await asana['api'].post('/tasks', {
+          data: {
+            name: parsed.taskName,
+            projects: [projectGid],
+            notes: parsed.description || baseTask.description,
+            assignee: parsed.assignee ? await this.findUserGid(asana, parsed.assignee) : undefined,
+          },
+        });
+
+        console.log(`✅ Created task: ${newTask.data.gid}`);
+
+        // Copy subtasks if they exist
+        if (baseTask.subtasks && baseTask.subtasks.length > 0) {
+          for (const subtask of baseTask.subtasks) {
+            const { data: newSubtask } = await asana['api'].post('/tasks', {
+              data: {
+                name: subtask.name,
+                parent: newTask.data.gid,
+              },
+            });
+
+            // Add comment to first subtask if requested
+            if (parsed.subtaskComment && baseTask.subtasks.indexOf(subtask) === 0) {
+              await asana['api'].post(`/tasks/${newSubtask.data.gid}/stories`, {
+                data: { text: parsed.subtaskComment },
+              });
+              console.log(`💬 Added comment to first subtask`);
+            }
+          }
+        }
+
+        const taskLink = `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
+        return {
+          answer: `✅ **Task created successfully!**
+
+**New Task:** [${parsed.taskName}](${taskLink})
+- **Project:** ${parsed.project}
+- **Duplicated from:** ${baseTask.name}
+- **Subtasks:** ${baseTask.subtasks?.length || 0} subtasks copied${parsed.subtaskComment ? '\n- **First subtask comment:** Added' : ''}
+
+You can view it in Asana using the link above.`,
+        };
+      }
+
+      if (parsed.action === 'create_task') {
+        const projectGid = parsed.project === 'Media Squad' ? MEDIA_SQUAD_PROJECT_GID : MEDIA_RIAN_PROJECT_GID;
+
+        const { data: newTask } = await asana['api'].post('/tasks', {
+          data: {
+            name: parsed.taskName,
+            projects: [projectGid],
+            notes: parsed.description,
+            assignee: parsed.assignee ? await this.findUserGid(asana, parsed.assignee) : undefined,
+          },
+        });
+
+        const taskLink = `https://app.asana.com/0/${projectGid}/${newTask.data.gid}`;
+        return {
+          answer: `✅ **Task created successfully!**
+
+**New Task:** [${parsed.taskName}](${taskLink})
+- **Project:** ${parsed.project}
+${parsed.assignee ? `- **Assigned to:** ${parsed.assignee}` : ''}
+
+You can view it in Asana using the link above.`,
+        };
+      }
+
+      return { answer: '❌ Could not understand task creation request. Please try rephrasing.' };
+    } catch (error: any) {
+      console.error('❌ Task creation error:', error.message);
+      return { answer: `❌ Failed to create task: ${error.message}` };
+    }
+  }
+
+  /**
+   * Find user GID by name
+   */
+  private async findUserGid(asana: AsanaService, name: string): Promise<string | undefined> {
+    try {
+      const { data } = await asana['api'].get(`/workspaces/${WORKSPACE_GID}/users`, {
+        params: { opt_fields: 'name,gid' },
+      });
+
+      const user = data.data.find((u: any) =>
+        u.name.toLowerCase().includes(name.toLowerCase())
+      );
+
+      return user?.gid;
+    } catch (err) {
+      console.error('Error finding user:', err);
+      return undefined;
+    }
   }
 }
