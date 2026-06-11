@@ -780,6 +780,10 @@ Examples:
 
 Return ALL actions as an array.`;
 
+      console.log('📤 Sending request to OpenRouter API...');
+      console.log(`📤 Model: deepseek/deepseek-v4-flash`);
+      console.log(`📤 Prompt length: ${parsePrompt.length} chars`);
+
       const parseResponse = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
@@ -796,7 +800,16 @@ Return ALL actions as an array.`;
         }
       );
 
-      const responseContent = parseResponse.data.choices[0].message.content;
+      console.log('📥 OpenRouter response received');
+      console.log('📥 Response status:', parseResponse.status);
+      console.log('📥 Response data:', JSON.stringify(parseResponse.data, null, 2));
+
+      if (!parseResponse.data || !parseResponse.data.choices || !parseResponse.data.choices[0]) {
+        console.error('❌ Invalid API response structure:', parseResponse.data);
+        throw new Error(`OpenRouter API returned invalid response: ${JSON.stringify(parseResponse.data)}`);
+      }
+
+      const responseContent = parseResponse.data.choices[0].message?.content;
       console.log('🤖 AI parsing response:', responseContent);
 
       // Extract JSON from response - AI might include extra text
