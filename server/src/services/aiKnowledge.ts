@@ -724,48 +724,87 @@ Please provide a detailed, helpful answer based on this data.`,
 
     const asana = new AsanaService(asanaAccessToken);
 
-    // STEP 1: Extract intent from user query using AI
+    // STEP 1: Let AI reason through the request
     try {
-      // Build team context for the AI
+      // Build context for the AI to reason with
       const teamContext = this.teamMembers.length > 0
-        ? `\n\nTeam Members (for @mentions):\n${this.teamMembers.map(m => `- ${m.name}`).join('\n')}`
+        ? `\n\n### Available Team Members:\n${this.teamMembers.map(m => `- ${m.name}`).join('\n')}`
         : '';
 
-      const parsePrompt = `You are an intelligent Asana assistant. Analyze the user's natural language request and extract structured actions.
+      const taskContext = `\n\n### Sample of Available Tasks (for reference):\n${this.knowledgeBase.slice(0, 20).map(t => `- "${t.name}" (${t.project})`).join('\n')}`;
 
-User Request: "${query}"
+      const parsePrompt = `You are an intelligent Asana assistant with reasoning capabilities. Your job is to:
+
+1. **THINK** about what the user wants
+2. **REASON** about which APIs/actions are available to you
+3. **PLAN** the sequence of steps needed
+4. **EXTRACT** structured actions
+
+## User's Request:
+"${query}"
+
+## Your Available Capabilities:
+- **create_task**: Create a brand new task from scratch
+- **duplicate_task**: Copy an existing task (including all subtasks)
+- **post_comment**: Add a comment to a task (can tag people with @@Name)
+- **change_assignee**: Change who's assigned to a task
+- **set_due_date**: Set or update a task's due date
+- **add_subtask**: Add a subtask to a parent task
+- **delete_task**: Delete a task
+- **set_custom_field**: Update custom field values
+- **list_custom_fields**: List all custom fields for a task
+
 ${teamContext}
+${taskContext}
 
-Your task is to understand:
-1. What ACTION they want (create, comment, update, etc.)
-2. Which TASK they're referring to (extract the core task name, ignoring descriptive words like "video", "sample", "file", "task")
-3. Who they want to TAG (identify person names and format as @@FirstName LastName)
-4. What CONTENT they want to include (comments, descriptions, etc.)
+## Reasoning Process:
 
-Be smart about context:
-- "Anupama video" → task is probably "Anupama", not "Anupama video"
-- "followup on X" → means post a comment to task X
-- "ask Person about Y" → means post comment tagging @@Person asking about Y
-- Words like "video", "sample", "file", "document" are usually NOT part of task names
+**Step 1 - Understand Intent:**
+What is the user trying to accomplish? Break down their request into clear goals.
 
-When tagging people in comments:
-- Use @@FirstName LastName format (e.g., "@@Samrudhi Patil")
-- Match names from the team members list above
-- Include the tag naturally in the comment text
+**Step 2 - Identify Resources:**
+- Are they mentioning an existing task? (Look for task names in the available tasks list)
+- Are they creating something new?
+- Who needs to be involved? (Check team members list)
 
-Respond ONLY with valid JSON (no other text) in this exact format:
+**Step 3 - Plan Actions:**
+Think through the logical sequence of steps. For example:
+- If duplicating a task THEN posting a comment to it, you need: duplicate_task → post_comment
+- If they say "create ADCC task" but "ADCC Template" exists, they probably mean duplicate it
+- If they say "Template ADCC" or "ADCC Template", they mean the same task
+
+**Step 4 - Smart Matching:**
+- Task names can be in different word orders: "ADCC Template" = "Template ADCC"
+- Ignore filler words: "video", "sample", "file", "task" are descriptors, not part of names
+- If unsure between create vs duplicate, check if a similar template exists
+
+**Step 5 - Extract People & Content:**
+- Convert informal names to @@FirstName LastName format
+- Include context in comments (links, deadlines, urgency)
+
+## Response Format:
+
+First, show your reasoning (wrapped in <thinking> tags):
+<thinking>
+1. User wants to: [what they want]
+2. I should: [your plan]
+3. Resources needed: [tasks, people, etc.]
+4. Sequence: [step by step]
+</thinking>
+
+Then provide the JSON actions:
 {
   "actions": [
     {
       "type": "create_task" | "duplicate_task" | "post_comment" | "change_assignee" | "set_due_date" | "add_subtask" | "delete_task" | "set_custom_field" | "list_custom_fields",
-      "taskIdentifier": "string (core task name only)",
+      "taskIdentifier": "string (task to act on)",
       "taskName": "string (for create/duplicate)",
-      "project": "Media Squad" | "Media.Rian" (for create/duplicate),
+      "project": "Media Squad" | "Media.Rian",
       "description": "string or null",
       "assignee": "string or null",
       "dueDate": "YYYY-MM-DD or null",
-      "baseTaskName": "string or null",
-      "commentText": "string with @@mentions or null",
+      "baseTaskName": "string (template to copy from)",
+      "commentText": "string with @@mentions",
       "subtaskName": "string or null",
       "customFieldName": "string or null",
       "customFieldValue": "string or null"
@@ -773,12 +812,7 @@ Respond ONLY with valid JSON (no other text) in this exact format:
   ]
 }
 
-Examples:
-- "create task Test in Media Squad" → {"actions":[{"type":"create_task","taskName":"Test","project":"Media Squad"}]}
-- "followup on Anupama video asking Samrudhi about the mix file" → {"actions":[{"type":"post_comment","taskIdentifier":"Anupama","commentText":"@@Samrudhi Patil — When will the mix file be ready?"}]}
-- "post on Pravas sample asking about QC vendor timeline" → {"actions":[{"type":"post_comment","taskIdentifier":"Pravas","commentText":"@@Samrudhi Patil — What's the update on the QC vendor timeline for hybrid output delivery?"}]}
-
-Return ALL actions as an array.`;
+Think step by step and be smart about understanding the user's intent!`;
 
       console.log('📤 Sending request to OpenRouter API...');
       console.log(`📤 Model: deepseek/deepseek-v4-flash`);
@@ -810,16 +844,28 @@ Return ALL actions as an array.`;
       }
 
       const responseContent = parseResponse.data.choices[0].message?.content;
-      console.log('🤖 AI parsing response:', responseContent);
+      console.log('🤖 AI response received');
 
-      // Extract JSON from response - AI might include extra text
-      let jsonContent = responseContent;
       if (!responseContent) {
         throw new Error('AI returned empty response');
       }
 
+      // Extract AI's reasoning (if present)
+      const thinkingMatch = responseContent.match(/<thinking>([\s\S]*?)<\/thinking>/);
+      if (thinkingMatch) {
+        console.log('\n🧠 AI REASONING:');
+        console.log(thinkingMatch[1].trim());
+        console.log('');
+      }
+
+      // Extract JSON from response - AI might include thinking tags and other text
+      let jsonContent = responseContent;
+
+      // Remove thinking tags if present
+      jsonContent = jsonContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
+
       // Try to extract JSON from markdown code blocks if present
-      const jsonMatch = responseContent.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      const jsonMatch = jsonContent.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
       if (jsonMatch) {
         jsonContent = jsonMatch[1].trim();
         console.log('📦 Extracted JSON from code block');
@@ -838,8 +884,9 @@ Return ALL actions as an array.`;
 
       console.log('📝 Parsed actions:', JSON.stringify(parsed, null, 2));
 
-      // STEP 2: Execute each action
+      // STEP 2: Execute each action sequentially (to handle dependencies)
       const results: Array<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> = [];
+      const createdTasks: Map<string, DeepTask> = new Map(); // Track newly created tasks
 
       for (const action of parsed.actions) {
         console.log(`\n⚙️  Executing action: ${action.type}`);
@@ -847,6 +894,33 @@ Return ALL actions as an array.`;
         try {
           const result = await this.executeAsanaAction(asana, action);
           results.push(result);
+
+          // If we created/duplicated a task, add it to our temporary knowledge base
+          if ((action.type === 'create_task' || action.type === 'duplicate_task') && result.success) {
+            console.log(`   💾 Caching newly created task: "${result.taskName}" (${result.taskGid})`);
+            createdTasks.set(result.taskName.toLowerCase(), {
+              gid: result.taskGid,
+              name: result.taskName,
+              project: action.project || 'Unknown',
+              assignee: 'Unassigned',
+              status: 'In Progress',
+              priority: 'P2',
+              flag: 'Amber',
+              client: '',
+              region: '',
+              type: 'General',
+              description: '',
+              due_date: '',
+              created_at: new Date().toISOString(),
+              modified_at: new Date().toISOString(),
+              completed: false,
+              comments: [],
+              subtasks: [],
+            });
+
+            // Also add to main knowledge base temporarily
+            this.knowledgeBase.push(createdTasks.get(result.taskName.toLowerCase())!);
+          }
         } catch (error: any) {
           console.error(`❌ Action failed:`, error.message);
           results.push({
@@ -1342,9 +1416,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Duplicate an existing task
    */
   private async executeDuplicateTask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const baseTask = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.baseTaskName.toLowerCase())
-    );
+    const baseTask = this.findTaskByName(action.baseTaskName);
 
     if (!baseTask) {
       throw new Error(`Base task "${action.baseTaskName}" not found`);
@@ -1383,9 +1455,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Post a comment to a task
    */
   private async executePostComment(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1458,9 +1528,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Change task assignee
    */
   private async executeChangeAssignee(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1492,9 +1560,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Set or update due date
    */
   private async executeSetDueDate(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1519,9 +1585,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Add a subtask
    */
   private async executeAddSubtask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1550,9 +1614,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Delete a task
    */
   private async executeDeleteTask(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1575,9 +1637,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * Set custom field value
    */
   private async executeSetCustomField(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1628,9 +1688,7 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
    * List custom fields for a task
    */
   private async executeListCustomFields(asana: AsanaService, action: any): Promise<{ type: string; taskName: string; taskGid: string; success: boolean; message: string }> {
-    const task = this.knowledgeBase.find(t =>
-      t.name.toLowerCase().includes(action.taskIdentifier.toLowerCase())
-    );
+    const task = this.findTaskByName(action.taskIdentifier);
 
     if (!task) {
       throw new Error(`Task "${action.taskIdentifier}" not found`);
@@ -1651,6 +1709,70 @@ IMPORTANT: Extract ALL comments mentioned in the request. Return as an array.`;
       success: true,
       message: `Custom fields for "${task.name}": ${fields}`,
     };
+  }
+
+  /**
+   * Smart fuzzy task finder - handles word order, partial matches, and common variations
+   */
+  private findTaskByName(searchName: string): DeepTask | undefined {
+    if (!searchName) return undefined;
+
+    const search = searchName.toLowerCase().trim();
+    const searchWords = search.split(/\s+/).filter(w => w.length > 0);
+
+    console.log(`🔍 Smart search for: "${searchName}"`);
+    console.log(`   Search words: [${searchWords.join(', ')}]`);
+
+    // Strategy 1: Exact match (case-insensitive)
+    let task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase() === search
+    );
+    if (task) {
+      console.log(`   ✅ Exact match: "${task.name}"`);
+      return task;
+    }
+
+    // Strategy 2: Exact substring match
+    task = this.knowledgeBase.find(t =>
+      t.name.toLowerCase().includes(search)
+    );
+    if (task) {
+      console.log(`   ✅ Substring match: "${task.name}"`);
+      return task;
+    }
+
+    // Strategy 3: All search words present (any order)
+    task = this.knowledgeBase.find(t => {
+      const taskNameLower = t.name.toLowerCase();
+      return searchWords.every(word => taskNameLower.includes(word));
+    });
+    if (task) {
+      console.log(`   ✅ Word match (any order): "${task.name}"`);
+      return task;
+    }
+
+    // Strategy 4: Fuzzy match - score by word overlap
+    const scoredTasks = this.knowledgeBase.map(t => {
+      const taskWords = t.name.toLowerCase().split(/\s+/);
+      const matchingWords = searchWords.filter(sw =>
+        taskWords.some(tw => tw.includes(sw) || sw.includes(tw))
+      );
+      const score = matchingWords.length / searchWords.length;
+      return { task: t, score };
+    });
+
+    const bestMatch = scoredTasks
+      .filter(st => st.score > 0.5) // At least 50% word match
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (bestMatch) {
+      console.log(`   ✅ Fuzzy match (${Math.round(bestMatch.score * 100)}%): "${bestMatch.task.name}"`);
+      return bestMatch.task;
+    }
+
+    console.log(`   ❌ No match found for "${searchName}"`);
+    console.log(`   Available tasks: ${this.knowledgeBase.slice(0, 5).map(t => t.name).join(', ')}...`);
+    return undefined;
   }
 
   /**
