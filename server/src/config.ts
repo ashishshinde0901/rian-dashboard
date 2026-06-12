@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-dotenv.config({ path: '../.env' });
+dotenv.config(); // Railway provides env vars directly, no path needed
 
 // Role configuration
 const SUPER_ADMINS = (process.env.SUPER_ADMIN_EMAILS || '')

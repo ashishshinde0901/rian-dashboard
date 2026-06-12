@@ -54,19 +54,35 @@ app.get('/health', (_, res) => res.json({ status: 'ok' }));
 // Initialize database and start server
 const startServer = async () => {
   try {
+    console.log('🔧 Environment:', {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: config.port,
+      FRONTEND_URL: config.frontendUrl,
+      IS_PRODUCTION: config.isProduction,
+    });
+
     // Initialize database schema
     await initializeDatabase();
 
-    app.listen(config.port, () => {
-      console.log(`🚀 Server running on http://localhost:${config.port}`);
+    const server = app.listen(config.port, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://0.0.0.0:${config.port}`);
       console.log(`📊 Frontend URL: ${config.frontendUrl}`);
       console.log(`🔐 OAuth Redirect: ${config.asana.redirectUri}`);
 
       // Start daily email scheduler
       SchedulerService.startDailyEmailScheduler();
     });
+
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${config.port} is already in use`);
+      } else {
+        console.error('❌ Server error:', err);
+      }
+      process.exit(1);
+    });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
